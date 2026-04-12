@@ -1,19 +1,30 @@
 # encfixture
 
-[日本語](README.ja.md) | English
+[日本語](README.ja.md) | English | [Documentation](https://junara.github.io/encfixture/)
 
 A Go CLI tool for generating dummy media files (image, video, audio) for ffmpeg encoding tests.
 
 ## Requirements
 
-- Go 1.22+
-- ffmpeg (required for video and audio generation)
+- ffmpeg
 
 ## Installation
+
+### Homebrew (macOS / Linux)
+
+```bash
+brew install junara/tap/encfixture
+```
+
+### Go
 
 ```bash
 go install github.com/junara/encfixture@latest
 ```
+
+### Binary
+
+Download from [Releases](https://github.com/junara/encfixture/releases).
 
 ## Usage
 

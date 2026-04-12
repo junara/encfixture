@@ -1,19 +1,30 @@
 # encfixture
 
-日本語 | [English](README.md)
+日本語 | [English](README.md) | [ドキュメント](https://junara.github.io/encfixture/ja/)
 
 ffmpeg エンコードテスト用のダミー素材（画像・動画・音声）を生成する Go CLI ツールです。
 
 ## 必要条件
 
-- Go 1.22+
-- ffmpeg（動画・音声の生成に必要）
+- ffmpeg
 
 ## インストール
+
+### Homebrew（macOS / Linux）
+
+```bash
+brew install junara/tap/encfixture
+```
+
+### Go
 
 ```bash
 go install github.com/junara/encfixture@latest
 ```
+
+### バイナリ
+
+[Releases](https://github.com/junara/encfixture/releases) からダウンロードできます。
 
 ## 使い方
 
