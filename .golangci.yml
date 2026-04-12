@@ -1,0 +1,191 @@
+version: "2"
+
+linters:
+  enable:
+    - arangolint
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - canonicalheader
+    - containedctx
+    - contextcheck
+    - copyloopvar
+    - cyclop
+    - decorder
+    - dogsled
+    - dupl
+    - dupword
+    - durationcheck
+    - embeddedstructfieldcheck
+    - err113
+    - errcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
+    - exhaustruct
+    - exptostd
+    - fatcontext
+    - forbidigo
+    - forcetypeassert
+    - funcorder
+    - funlen
+    - ginkgolinter
+    - gocheckcompilerdirectives
+    - gochecknoglobals
+    - gochecknoinits
+    - gochecksumtype
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godoclint
+    - godot
+    - godox
+    - gomoddirectives
+    - gomodguard
+    - goprintffuncname
+    - gosec
+    - gosmopolitan
+    - govet
+    - grouper
+    - iface
+    - importas
+    - inamedparam
+    - ineffassign
+    - interfacebloat
+    - intrange
+    - iotamixing
+    - ireturn
+    - lll
+    - loggercheck
+    - maintidx
+    - makezero
+    - mirror
+    - misspell
+    - mnd
+    - modernize
+    - musttag
+    - nakedret
+    - nestif
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - nlreturn
+    - noctx
+    - noinlineerr
+    - nolintlint
+    - nonamedreturns
+    - nosprintfhostport
+    - paralleltest
+    - perfsprint
+    - prealloc
+    - predeclared
+    - promlinter
+    - protogetter
+    - reassign
+    - recvcheck
+    - revive
+    - rowserrcheck
+    - sloglint
+    - spancheck
+    - sqlclosecheck
+    - staticcheck
+    - tagalign
+    - tagliatelle
+    - testableexamples
+    - testifylint
+    - testpackage
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - unqueryvet
+    - unused
+    - usestdlibvars
+    - usetesting
+    - varnamelen
+    - wastedassign
+    - whitespace
+    - wrapcheck
+    - wsl_v5
+    - zerologlint
+  settings:
+    funlen:
+      lines: 120
+      statements: 80
+    cyclop:
+      max-complexity: 20
+    gocognit:
+      min-complexity: 30
+    gocyclo:
+      min-complexity: 20
+    lll:
+      line-length: 150
+    mnd:
+      ignored-numbers:
+        - "0"
+        - "1"
+        - "2"
+        - "4"
+        - "6"
+        - "8"
+        - "10"
+        - "30"
+        - "60"
+        - "100"
+        - "128"
+        - "192"
+        - "255"
+        - "440"
+        - "440.0"
+        - "1080"
+        - "1920"
+        - "3600"
+        - "48000"
+        - "65535"
+        - "65535.0"
+        - "0.5"
+        - "0.299"
+        - "0.587"
+        - "0.114"
+    nestif:
+      min-complexity: 8
+    nakedret:
+      max-func-lines: 50
+    interfacebloat:
+      max: 10
+    varnamelen:
+      min-name-length: 1
+    ireturn:
+      allow:
+        - error
+        - stdlib
+    wrapcheck:
+      ignore-sigs:
+        - fmt.Errorf(
+  exclusions:
+    rules:
+      - path: main\.go
+        linters:
+          - gochecknoglobals
+      - path: "interface/cli/"
+        linters:
+          - gochecknoglobals
+          - gochecknoinits
+          - exhaustruct
+          - mnd
+          - noinlineerr
+      - path: _test\.go
+        linters:
+          - funlen
+          - gocognit
+          - exhaustruct
+          - err113
+          - gosec
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
