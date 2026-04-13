@@ -32,6 +32,7 @@ export default defineConfig({
 						{ label: '動画の生成', slug: 'usage/video', translations: { en: 'Video' } },
 						{ label: '音声の生成', slug: 'usage/audio', translations: { en: 'Audio' } },
 						{ label: 'オーバーレイ', slug: 'usage/overlay', translations: { en: 'Overlay' } },
+						{ label: 'バッチ処理', slug: 'usage/batch', translations: { en: 'Batch' } },
 					],
 				},
 				{

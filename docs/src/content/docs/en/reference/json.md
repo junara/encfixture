@@ -51,3 +51,12 @@ $ encfixture video --json --tl frame -d 3 -o test.mp4
 $ encfixture audio --json -t sine -d 3 -o beep.wav
 {"status":"ok","file":"beep.wav","type":"audio","duration":"3"}
 ```
+
+### batch
+
+The `batch` command emits an aggregate object containing per-job results and totals. See [Batch Processing](/encfixture/en/usage/batch/) for details.
+
+```bash
+$ encfixture batch --json jobs.json
+{"results":[{"index":0,"type":"image","file":"a.png","status":"ok"}],"succeeded":1,"failed":0}
+```

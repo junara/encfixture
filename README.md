@@ -185,6 +185,55 @@ encfixture audio --json -t sine -d 3 -o beep.wav
 | `--frequency` | `-f` | 440 | Frequency (Hz) |
 | `--output` | `-o` | output.wav | Output file path (any format supported by ffmpeg) |
 
+### Batch Processing
+
+Run multiple jobs defined in a single JSON file. Useful for CI, exhaustive encoding tests, or generating fixtures across resolutions.
+
+```bash
+encfixture batch jobs.json
+```
+
+`jobs.json`:
+
+```json
+{
+  "defaults": { "width": 1920, "height": 1080 },
+  "jobs": [
+    { "type": "video", "output": "clip.mp4", "duration": "5", "tl": "frame", "tr": "timecode" },
+    { "type": "image", "output": "thumb.png", "bg": "test" },
+    { "type": "audio", "output": "beep.wav", "audio": "sine", "frequency": 1000 }
+  ]
+}
+```
+
+`type` and `output` are required on each job. Other fields map to the flags of the matching subcommand (use `sampleRate` in JSON instead of `--sample-rate`). Values in the top-level `defaults` object are applied to every job and can be overridden per-job. Unknown fields are rejected to catch typos early.
+
+```bash
+# Cap concurrency and stop scheduling after the first failure
+encfixture batch jobs.json --parallel 4 --fail-fast
+
+# Machine-readable summary for CI
+encfixture batch jobs.json --json
+```
+
+#### batch Flags
+
+| Flag | Short | Default | Description |
+|---|---|---|---|
+| `--parallel` | `-p` | `NumCPU/2` (min 1) | Max concurrent jobs |
+| `--fail-fast` | | false | Skip pending jobs after the first failure |
+
+Parallelism guideline: ffmpeg is CPU-bound and already multi-threaded, so higher is not always faster.
+
+| Batch profile | Suggested `--parallel` |
+|---|---|
+| Video-heavy (high-res / long) | `1`–`2` |
+| Video-heavy (low-res / short) | `NumCPU/2` (default) |
+| Image only | `NumCPU` |
+| Audio only | `NumCPU/2`–`NumCPU` |
+
+See [Batch Processing](https://junara.github.io/encfixture/en/usage/batch/) for full reference.
+
 ### JSON Output
 
 Add `--json` to output results as JSON to stdout.
@@ -192,6 +241,13 @@ Add `--json` to output results as JSON to stdout.
 ```bash
 $ encfixture video --json --tl frame --tr timecode -d 5 -o test.mp4
 {"status":"ok","file":"test.mp4","type":"video","width":1920,"height":1080,"fps":30,"duration":"5"}
+```
+
+`batch` emits an aggregated summary:
+
+```bash
+$ encfixture batch --json jobs.json
+{"results":[{"index":0,"type":"image","file":"a.png","status":"ok"}],"succeeded":1,"failed":0}
 ```
 
 ## Supported Colors

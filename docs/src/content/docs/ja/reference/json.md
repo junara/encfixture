@@ -51,3 +51,12 @@ $ encfixture video --json --tl frame -d 3 -o test.mp4
 $ encfixture audio --json -t sine -d 3 -o beep.wav
 {"status":"ok","file":"beep.wav","type":"audio","duration":"3"}
 ```
+
+### batch
+
+`batch` コマンドはジョブごとの結果と集計を含む集約オブジェクトを出力します。詳細は [バッチ処理](/encfixture/ja/usage/batch/) を参照してください。
+
+```bash
+$ encfixture batch --json jobs.json
+{"results":[{"index":0,"type":"image","file":"a.png","status":"ok"}],"succeeded":1,"failed":0}
+```

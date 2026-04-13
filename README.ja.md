@@ -197,6 +197,55 @@ encfixture audio --json -t sine -d 3 -o beep.wav
 | `--frequency` | `-f` | 440 | 周波数（Hz） |
 | `--output` | `-o` | output.wav | 出力ファイルパス（ffmpeg 対応の任意フォーマット） |
 
+### バッチ処理
+
+JSON ファイルで定義した複数ジョブを一括実行します。CI、エンコード網羅テスト、解像度違いのサンプル生成などに便利です。
+
+```bash
+encfixture batch jobs.json
+```
+
+`jobs.json`:
+
+```json
+{
+  "defaults": { "width": 1920, "height": 1080 },
+  "jobs": [
+    { "type": "video", "output": "clip.mp4", "duration": "5", "tl": "frame", "tr": "timecode" },
+    { "type": "image", "output": "thumb.png", "bg": "test" },
+    { "type": "audio", "output": "beep.wav", "audio": "sine", "frequency": 1000 }
+  ]
+}
+```
+
+各ジョブには `type` と `output` が必須です。その他のフィールドは対応するサブコマンドのフラグと同じ意味です（`--sample-rate` は JSON では `sampleRate` と書きます）。トップレベルの `defaults` は全ジョブに適用され、各ジョブで個別に上書きできます。未知のフィールドはエラーになり typo を早期検出できます。
+
+```bash
+# 並列度を制限し、最初の失敗で残りをスキップ
+encfixture batch jobs.json --parallel 4 --fail-fast
+
+# CI 向けに構造化された結果を取得
+encfixture batch jobs.json --json
+```
+
+#### batch フラグ
+
+| フラグ | 短縮 | デフォルト | 説明 |
+|---|---|---|---|
+| `--parallel` | `-p` | `NumCPU/2`（最低 1） | 同時実行ジョブ数の上限 |
+| `--fail-fast` | | false | 最初の失敗以降、未着手のジョブをスキップ |
+
+並列度の目安: ffmpeg は CPU バウンドで内部的にも複数スレッドを使うため、並列度を上げれば速くなるとは限りません。
+
+| ジョブの傾向 | 推奨 `--parallel` |
+|---|---|
+| 動画（高解像度・長尺）中心 | `1`〜`2` |
+| 動画（低解像度・短尺）中心 | `NumCPU/2`（デフォルト） |
+| 画像のみ | `NumCPU` |
+| 音声のみ | `NumCPU/2`〜`NumCPU` |
+
+詳細は [バッチ処理](https://junara.github.io/encfixture/ja/usage/batch/) を参照してください。
+
 ### JSON 出力
 
 `--json` フラグを付けると、結果を JSON で標準出力に出力します。
@@ -204,6 +253,13 @@ encfixture audio --json -t sine -d 3 -o beep.wav
 ```bash
 $ encfixture video --json --tl frame --tr timecode -d 5 -o test.mp4
 {"status":"ok","file":"test.mp4","type":"video","width":1920,"height":1080,"fps":30,"duration":"5"}
+```
+
+`batch` コマンドは集計オブジェクトを出力します:
+
+```bash
+$ encfixture batch --json jobs.json
+{"results":[{"index":0,"type":"image","file":"a.png","status":"ok"}],"succeeded":1,"failed":0}
 ```
 
 ## 対応色
