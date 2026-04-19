@@ -1,0 +1,4 @@
+name: encfixture
+version: 0.1.0
+description: APM package for `encfixture`, a CLI that generates dummy media files (image / video / audio) for ffmpeg encoding tests.
+author: junara
