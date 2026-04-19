@@ -2,3 +2,7 @@ encfixture
 dist/
 tmp/
 docs/node_modules/
+
+
+# APM dependencies
+apm_modules/
