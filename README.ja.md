@@ -322,6 +322,37 @@ Claude が実行:
   - `encfixture <subcommand> --help` で利用可能なフラグを確認できます。
 ```
 
+## Agent Skill
+
+encfixture は [Agent Skill](https://agentskills.io)（`SKILL.md`）と [APM](https://microsoft.github.io/apm/) パッケージを同梱しています。プロジェクトにインストールしておくと、AI コーディングエージェントが encfixture のフラグ・オーバーレイ予約語・batch スキーマを毎回説明せずに扱えるようになります。
+
+### `gh skill` でインストール（GitHub CLI）
+
+Claude Code / GitHub Copilot / Cursor / Codex / Gemini CLI に対応しています。
+
+```bash
+# Claude Code（プロジェクトスコープ）
+gh skill install junara/encfixture encfixture --agent claude-code
+
+# GitHub Copilot をユーザースコープで
+gh skill install junara/encfixture encfixture --agent github-copilot --scope user
+
+# 特定バージョンに固定
+gh skill install junara/encfixture encfixture@v1.0.0 --agent claude-code
+```
+
+スキルは各エージェントのネイティブディレクトリ（例: `.claude/skills/encfixture/` / `~/.copilot/skills/encfixture/`）に配置されます。
+
+### `apm` でインストール
+
+スキルに加えて、定型ワークフローの prompt 3 本（`generate-test-fixtures` / `generate-video-with-overlay` / `generate-batch-spec`）も同時に取得できます。
+
+```bash
+apm install junara/encfixture
+```
+
+APM はプロジェクト内に存在するエージェント分だけ `.claude/` / `.github/` / `.cursor/` / `.opencode/` にデプロイします。
+
 ## 開発
 
 ```bash

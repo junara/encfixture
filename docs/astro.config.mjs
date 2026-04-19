@@ -48,6 +48,7 @@ export default defineConfig({
 					translations: { en: 'Integration' },
 					items: [
 						{ label: 'Claude Code', slug: 'integration/claude-code' },
+						{ label: 'Agent Skill', slug: 'integration/agent-skill' },
 					],
 				},
 			],

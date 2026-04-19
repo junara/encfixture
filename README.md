@@ -310,6 +310,37 @@ Add the following to your project's `CLAUDE.md` to let Claude Code know about en
   - Use `encfixture <subcommand> --help` for available flags.
 ```
 
+## Agent Skill
+
+encfixture ships an [Agent Skill](https://agentskills.io) (`SKILL.md`) and an [APM](https://microsoft.github.io/apm/) package. Install it into your project so AI coding agents pick up encfixture's flags, overlay keywords, and batch schema without you having to explain them each time.
+
+### Install with `gh skill` (GitHub CLI)
+
+Works for Claude Code, GitHub Copilot, Cursor, Codex, and Gemini CLI.
+
+```bash
+# Claude Code (project scope)
+gh skill install junara/encfixture encfixture --agent claude-code
+
+# GitHub Copilot at user scope
+gh skill install junara/encfixture encfixture --agent github-copilot --scope user
+
+# Pin to a specific release
+gh skill install junara/encfixture encfixture@v1.0.0 --agent claude-code
+```
+
+The skill is deployed to the agent's native directory (e.g. `.claude/skills/encfixture/` or `~/.copilot/skills/encfixture/`).
+
+### Install with `apm`
+
+Gets both the skill and the reusable prompts (`generate-test-fixtures`, `generate-video-with-overlay`, `generate-batch-spec`).
+
+```bash
+apm install junara/encfixture
+```
+
+APM deploys to `.claude/`, `.github/`, `.cursor/`, and `.opencode/` — whichever agents are present in the project.
+
 ## Development
 
 ```bash
