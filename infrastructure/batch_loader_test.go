@@ -93,6 +93,52 @@ func TestLoadBatch_AllTypes(t *testing.T) {
 	}
 }
 
+func TestLoadBatch_EncodeFields(t *testing.T) {
+	t.Parallel()
+
+	path := writeJSON(t, `{
+  "defaults": {"codec": "h264", "crf": 23},
+  "jobs": [
+    {"type": "video", "output": "v.mp4", "bitrate": "5M", "pixFmt": "yuv444p"},
+    {"type": "video", "output": "w.mp4", "codec": "vp9"},
+    {"type": "image", "output": "i.jpg", "quality": 75}
+  ]
+}`)
+
+	batch, err := infrastructure.LoadBatch(path)
+	if err != nil {
+		t.Fatalf("LoadBatch: %v", err)
+	}
+
+	first := batch.Jobs[0].Video
+	if first.Codec != domain.CodecH264 || first.CRF != "23" || first.Bitrate != "5M" || first.PixFmt != "yuv444p" {
+		t.Errorf("encode fields not applied: %+v", first)
+	}
+
+	if batch.Jobs[1].Video.Codec != domain.CodecVP9 {
+		t.Errorf("codec override lost: %q", batch.Jobs[1].Video.Codec)
+	}
+
+	if batch.Jobs[2].Image.Quality != 75 {
+		t.Errorf("quality = %d, want 75", batch.Jobs[2].Image.Quality)
+	}
+}
+
+func TestLoadBatch_QualityDefault(t *testing.T) {
+	t.Parallel()
+
+	path := writeJSON(t, `{"jobs":[{"type":"image","output":"i.jpg"}]}`)
+
+	batch, err := infrastructure.LoadBatch(path)
+	if err != nil {
+		t.Fatalf("LoadBatch: %v", err)
+	}
+
+	if batch.Jobs[0].Image.Quality != 90 {
+		t.Errorf("quality default = %d, want 90", batch.Jobs[0].Image.Quality)
+	}
+}
+
 func TestLoadBatch_RejectsUnknownField(t *testing.T) {
 	t.Parallel()
 

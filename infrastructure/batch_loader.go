@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/junara/encfixture/domain"
 )
@@ -32,6 +33,11 @@ type jobDTO struct {
 	SampleRate *int     `json:"sampleRate"`
 	Channels   *int     `json:"channels"`
 	Frequency  *float64 `json:"frequency"`
+	Codec      *string  `json:"codec"`
+	CRF        *int     `json:"crf"`
+	Bitrate    *string  `json:"bitrate"`
+	PixFmt     *string  `json:"pixFmt"`
+	Quality    *int     `json:"quality"`
 }
 
 type batchDTO struct {
@@ -63,6 +69,7 @@ func LoadBatch(path string) (domain.Batch, error) {
 		Type: nil, Width: nil, Height: nil, FPS: nil, Duration: nil,
 		BG: nil, Color: nil, TL: nil, TR: nil, Center: nil, BL: nil, BR: nil,
 		Scale: nil, Output: nil, Audio: nil, SampleRate: nil, Channels: nil, Frequency: nil,
+		Codec: nil, CRF: nil, Bitrate: nil, PixFmt: nil, Quality: nil,
 	}
 	if dto.Defaults != nil {
 		defaults = *dto.Defaults
@@ -129,6 +136,7 @@ func buildImage(defaults, job *jobDTO, output string) domain.ImageConfig {
 		Overlay:    buildOverlay(defaults, job),
 		Scale:      pickInt(job.Scale, defaults.Scale, 4),
 		Output:     output,
+		Quality:    pickInt(job.Quality, defaults.Quality, defaultJPEGQuality),
 	}
 }
 
@@ -147,7 +155,22 @@ func buildVideo(defaults, job *jobDTO, output string) domain.VideoConfig {
 		SampleRate: pickInt(job.SampleRate, defaults.SampleRate, 48000),
 		Channels:   pickInt(job.Channels, defaults.Channels, 2),
 		Frequency:  pickFloat(job.Frequency, defaults.Frequency, 440.0),
+		Codec:      domain.VideoCodec(pickString(job.Codec, defaults.Codec, "")),
+		CRF:        pickCRF(job.CRF, defaults.CRF),
+		Bitrate:    pickString(job.Bitrate, defaults.Bitrate, ""),
+		PixFmt:     pickString(job.PixFmt, defaults.PixFmt, ""),
 	}
+}
+
+// pickCRF resolves the CRF value; nil (unset) maps to an empty string so the
+// encoder default is used.
+func pickCRF(primary, fallback *int) string {
+	crf := pickInt(primary, fallback, -1)
+	if crf < 0 {
+		return ""
+	}
+
+	return strconv.Itoa(crf)
 }
 
 func buildAudio(defaults, job *jobDTO, output string) domain.AudioConfig {
