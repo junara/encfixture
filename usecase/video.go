@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"errors"
 	"fmt"
 	"image"
 	"image/color"
@@ -17,7 +18,77 @@ const (
 	webmExtension    = ".webm"
 	secondsPerHour   = 3600
 	secondsPerMinute = 60
+	// proResPixelFormat is the default pixel format for ProRes output (prores_ks).
+	proResPixelFormat = "yuv422p10le"
 )
+
+// ErrUnknownVideoCodec indicates an unrecognized video codec was specified.
+var ErrUnknownVideoCodec = errors.New("unknown video codec")
+
+func encoderName(codec domain.VideoCodec) (string, error) {
+	switch codec {
+	case domain.CodecH264:
+		return "libx264", nil
+	case domain.CodecHEVC:
+		return "libx265", nil
+	case domain.CodecVP9:
+		return "libvpx-vp9", nil
+	case domain.CodecAV1:
+		return "libaom-av1", nil
+	case domain.CodecProRes:
+		return "prores_ks", nil
+	default:
+		return "", fmt.Errorf("%w: %s (supported: h264, hevc, vp9, av1, prores)", ErrUnknownVideoCodec, codec)
+	}
+}
+
+// buildEncodeArgs assembles the ffmpeg output options for codec, quality and
+// pixel format. defaultPixFmt is used when neither the config nor the codec
+// dictates one; pass "" to leave the pixel format to ffmpeg.
+func buildEncodeArgs(cfg domain.VideoConfig, ext, defaultPixFmt string) ([]string, error) {
+	var args []string
+
+	codec := cfg.Codec
+	if codec == "" && ext == webmExtension {
+		codec = domain.CodecVP9
+	}
+
+	if codec != "" {
+		encoder, err := encoderName(codec)
+		if err != nil {
+			return nil, err
+		}
+
+		args = append(args, "-c:v", encoder)
+	}
+
+	if ext == webmExtension {
+		args = append(args, "-c:a", "libopus")
+	}
+
+	if cfg.CRF != "" {
+		args = append(args, "-crf", cfg.CRF)
+	}
+
+	if cfg.Bitrate != "" {
+		args = append(args, "-b:v", cfg.Bitrate)
+	}
+
+	pixFmt := cfg.PixFmt
+	if pixFmt == "" && codec == domain.CodecProRes {
+		pixFmt = proResPixelFormat
+	}
+
+	if pixFmt == "" {
+		pixFmt = defaultPixFmt
+	}
+
+	if pixFmt != "" {
+		args = append(args, "-pix_fmt", pixFmt)
+	}
+
+	return args, nil
+}
 
 // VideoUseCase handles video file generation.
 type VideoUseCase struct {
@@ -50,18 +121,18 @@ func (uc *VideoUseCase) generateSimple(cfg domain.VideoConfig, ext string) error
 	videoFilter := fmt.Sprintf("color=c=%s:s=%dx%d:d=%s:r=%d", cfg.Color, cfg.Width, cfg.Height, cfg.Duration, cfg.FPS)
 	audioFilter := uc.buildAudioFilter(cfg)
 
-	args := []string{
+	encodeArgs, encodeErr := buildEncodeArgs(cfg, ext, "")
+	if encodeErr != nil {
+		return encodeErr
+	}
+
+	args := append([]string{
 		"-y",
 		"-f", "lavfi", "-i", videoFilter,
 		"-f", "lavfi", "-i", audioFilter,
 		"-t", cfg.Duration,
 		"-shortest",
-	}
-
-	if ext == webmExtension {
-		args = append(args, "-c:v", "libvpx-vp9", "-c:a", "libopus")
-	}
-
+	}, encodeArgs...)
 	args = append(args, cfg.Output)
 
 	runErr := uc.ffmpeg.Run(args...)
@@ -78,6 +149,11 @@ func (uc *VideoUseCase) generateWithFrames(cfg domain.VideoConfig, ext string) e
 		return fmt.Errorf("invalid duration: %w", err)
 	}
 
+	encodeArgs, encodeErr := buildEncodeArgs(cfg, ext, "yuv420p")
+	if encodeErr != nil {
+		return encodeErr
+	}
+
 	totalFrames := int(durationSec * float64(cfg.FPS))
 	bgColor := uc.renderer.ParseColor(cfg.Color)
 	textColor := uc.renderer.ContrastColor(bgColor)
@@ -86,7 +162,7 @@ func (uc *VideoUseCase) generateWithFrames(cfg domain.VideoConfig, ext string) e
 
 	go uc.writeFrames(pipeWriter, errCh, cfg, totalFrames, bgColor, textColor)
 
-	ffmpegErr := uc.runFFmpegWithPipe(pipeReader, cfg, ext)
+	ffmpegErr := uc.runFFmpegWithPipe(pipeReader, cfg, encodeArgs)
 	if ffmpegErr != nil {
 		return fmt.Errorf("ffmpeg failed: %w", ffmpegErr)
 	}
@@ -127,8 +203,8 @@ func (uc *VideoUseCase) writeFrames(
 	errCh <- nil
 }
 
-func (uc *VideoUseCase) runFFmpegWithPipe(pipeReader *io.PipeReader, cfg domain.VideoConfig, ext string) error {
-	args := []string{
+func (uc *VideoUseCase) runFFmpegWithPipe(pipeReader *io.PipeReader, cfg domain.VideoConfig, encodeArgs []string) error {
+	args := append([]string{
 		"-y",
 		"-f", "rawvideo",
 		"-pixel_format", "rgba",
@@ -137,14 +213,8 @@ func (uc *VideoUseCase) runFFmpegWithPipe(pipeReader *io.PipeReader, cfg domain.
 		"-i", "pipe:0",
 		"-f", "lavfi", "-i", uc.buildAudioFilter(cfg),
 		"-t", cfg.Duration,
-		"-pix_fmt", "yuv420p",
 		"-shortest",
-	}
-
-	if ext == webmExtension {
-		args = append(args, "-c:v", "libvpx-vp9", "-c:a", "libopus")
-	}
-
+	}, encodeArgs...)
 	args = append(args, cfg.Output)
 
 	runErr := uc.ffmpeg.RunWithStdin(pipeReader, args...)

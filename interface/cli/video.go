@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/junara/encfixture/domain"
 	"github.com/junara/encfixture/infrastructure"
@@ -48,6 +49,10 @@ func init() {
 	videoCmd.Flags().IntP("sample-rate", "s", 48000, "Audio sample rate")
 	videoCmd.Flags().IntP("channels", "C", 2, "Audio channels")
 	videoCmd.Flags().Float64("frequency", 440.0, "Tone frequency in Hz (for sine/tone audio)")
+	videoCmd.Flags().String("codec", "", "Video codec: h264, hevc, vp9, av1, prores (default: container default)")
+	videoCmd.Flags().Int("crf", -1, "Constant rate factor for h264/hevc/vp9/av1 (-1: encoder default)")
+	videoCmd.Flags().String("bitrate", "", "Video bitrate, e.g. 5M or 800k (default: encoder default)")
+	videoCmd.Flags().String("pix-fmt", "", "Pixel format, e.g. yuv420p, yuv422p10le (default: codec-dependent)")
 }
 
 func runVideo(cmd *cobra.Command, _ []string) error {
@@ -68,6 +73,15 @@ func runVideo(cmd *cobra.Command, _ []string) error {
 	sampleRate, _ := cmd.Flags().GetInt("sample-rate")
 	channels, _ := cmd.Flags().GetInt("channels")
 	frequency, _ := cmd.Flags().GetFloat64("frequency")
+	codec, _ := cmd.Flags().GetString("codec")
+	crf, _ := cmd.Flags().GetInt("crf")
+	bitrate, _ := cmd.Flags().GetString("bitrate")
+	pixFmt, _ := cmd.Flags().GetString("pix-fmt")
+
+	crfValue := ""
+	if crf >= 0 {
+		crfValue = strconv.Itoa(crf)
+	}
 
 	cfg := domain.VideoConfig{
 		Width:      width,
@@ -89,6 +103,10 @@ func runVideo(cmd *cobra.Command, _ []string) error {
 		SampleRate: sampleRate,
 		Channels:   channels,
 		Frequency:  frequency,
+		Codec:      domain.VideoCodec(codec),
+		CRF:        crfValue,
+		Bitrate:    bitrate,
+		PixFmt:     pixFmt,
 	}
 
 	ffmpeg := infrastructure.NewFFmpeg()

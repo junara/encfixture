@@ -196,6 +196,160 @@ func TestVideoUseCase_Generate_WebmCodec(t *testing.T) {
 	}
 }
 
+func TestVideoUseCase_Generate_CodecSelection(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		codec  domain.VideoCodec
+		expect string
+	}{
+		{domain.CodecH264, "libx264"},
+		{domain.CodecHEVC, "libx265"},
+		{domain.CodecVP9, "libvpx-vp9"},
+		{domain.CodecAV1, "libaom-av1"},
+		{domain.CodecProRes, "prores_ks"},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.codec), func(t *testing.T) {
+			t.Parallel()
+
+			ffmpeg := &mockFFmpeg{}
+			renderer := newMockRenderer()
+			uc := usecase.NewVideoUseCase(ffmpeg, renderer)
+
+			cfg := domain.VideoConfig{
+				Width:      640,
+				Height:     480,
+				FPS:        30,
+				Duration:   "1",
+				Background: "solid",
+				Color:      "black",
+				Scale:      4,
+				Output:     "test.mkv",
+				Audio:      domain.AudioSilence,
+				SampleRate: 48000,
+				Channels:   2,
+				Codec:      tt.codec,
+			}
+
+			err := uc.Generate(cfg)
+			if err != nil {
+				t.Fatalf("Generate() error = %v", err)
+			}
+
+			args := strings.Join(ffmpeg.runArgs, " ")
+			if !strings.Contains(args, "-c:v "+tt.expect) {
+				t.Errorf("expected encoder %q in args, got: %s", tt.expect, args)
+			}
+		})
+	}
+}
+
+func TestVideoUseCase_Generate_UnknownCodec(t *testing.T) {
+	t.Parallel()
+
+	ffmpeg := &mockFFmpeg{}
+	renderer := newMockRenderer()
+	uc := usecase.NewVideoUseCase(ffmpeg, renderer)
+
+	cfg := domain.VideoConfig{
+		Width:      640,
+		Height:     480,
+		FPS:        30,
+		Duration:   "1",
+		Background: "solid",
+		Color:      "black",
+		Scale:      4,
+		Output:     "test.mp4",
+		Audio:      domain.AudioSilence,
+		SampleRate: 48000,
+		Channels:   2,
+		Codec:      "mpeg99",
+	}
+
+	err := uc.Generate(cfg)
+	if !errors.Is(err, usecase.ErrUnknownVideoCodec) {
+		t.Fatalf("Generate() error = %v, want ErrUnknownVideoCodec", err)
+	}
+
+	if ffmpeg.runCalled {
+		t.Error("ffmpeg.Run should not be called for unknown codec")
+	}
+}
+
+func TestVideoUseCase_Generate_EncodeOptions(t *testing.T) {
+	t.Parallel()
+
+	ffmpeg := &mockFFmpeg{}
+	renderer := newMockRenderer()
+	uc := usecase.NewVideoUseCase(ffmpeg, renderer)
+
+	cfg := domain.VideoConfig{
+		Width:      640,
+		Height:     480,
+		FPS:        30,
+		Duration:   "1",
+		Background: "solid",
+		Color:      "black",
+		Scale:      4,
+		Output:     "test.mp4",
+		Audio:      domain.AudioSilence,
+		SampleRate: 48000,
+		Channels:   2,
+		Codec:      domain.CodecH264,
+		CRF:        "23",
+		Bitrate:    "5M",
+		PixFmt:     "yuv444p",
+	}
+
+	err := uc.Generate(cfg)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	args := strings.Join(ffmpeg.runArgs, " ")
+
+	for _, want := range []string{"-crf 23", "-b:v 5M", "-pix_fmt yuv444p"} {
+		if !strings.Contains(args, want) {
+			t.Errorf("expected %q in args, got: %s", want, args)
+		}
+	}
+}
+
+func TestVideoUseCase_Generate_ProResDefaultPixFmt(t *testing.T) {
+	t.Parallel()
+
+	ffmpeg := &mockFFmpeg{}
+	renderer := newMockRenderer()
+	uc := usecase.NewVideoUseCase(ffmpeg, renderer)
+
+	cfg := domain.VideoConfig{
+		Width:      640,
+		Height:     480,
+		FPS:        30,
+		Duration:   "1",
+		Background: "solid",
+		Color:      "black",
+		Scale:      4,
+		Output:     "test.mov",
+		Audio:      domain.AudioSilence,
+		SampleRate: 48000,
+		Channels:   2,
+		Codec:      domain.CodecProRes,
+	}
+
+	err := uc.Generate(cfg)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	args := strings.Join(ffmpeg.runArgs, " ")
+	if !strings.Contains(args, "-pix_fmt yuv422p10le") {
+		t.Errorf("expected ProRes default pix_fmt yuv422p10le, got: %s", args)
+	}
+}
+
 func TestVideoUseCase_Generate_FFmpegUnavailable(t *testing.T) {
 	t.Parallel()
 

@@ -23,6 +23,19 @@ const (
 // BackgroundTest is the background type for color bar test patterns.
 const BackgroundTest = "test"
 
+// VideoCodec represents the video encoder selection.
+// An empty value means the container's default codec is used.
+type VideoCodec string
+
+// VideoCodec constants define the selectable video codecs.
+const (
+	CodecH264   VideoCodec = "h264"
+	CodecHEVC   VideoCodec = "hevc"
+	CodecVP9    VideoCodec = "vp9"
+	CodecAV1    VideoCodec = "av1"
+	CodecProRes VideoCodec = "prores"
+)
+
 // AudioType represents the type of audio to generate.
 type AudioType string
 
@@ -149,6 +162,10 @@ type VideoConfig struct {
 	SampleRate int
 	Channels   int
 	Frequency  float64
+	Codec      VideoCodec // empty means container default
+	CRF        string     // constant rate factor; empty means encoder default
+	Bitrate    string     // video bitrate (e.g. "5M"); empty means encoder default
+	PixFmt     string     // pixel format (e.g. "yuv420p"); empty means codec-dependent default
 }
 
 // AudioConfig holds the configuration for audio generation.
