@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/junara/encfixture/domain"
@@ -64,12 +65,10 @@ func printMediaInfo(path string, info domain.MediaInfo) {
 		return
 	}
 
-	lines := []string{
-		"File:     " + path,
-		"Format:   " + info.Format.FormatName,
-		"Duration: " + info.Format.Duration + "s",
-		"Size:     " + info.Format.Size + " bytes",
-	}
+	lines := []string{"File:     " + path}
+	lines = appendField(lines, "Format:   ", info.Format.FormatName, "")
+	lines = appendField(lines, "Duration: ", info.Format.Duration, "s")
+	lines = appendField(lines, "Size:     ", info.Format.Size, " bytes")
 
 	for _, stream := range info.Streams {
 		lines = append(lines, formatStreamLine(stream))
@@ -81,12 +80,41 @@ func printMediaInfo(path string, info domain.MediaInfo) {
 	}
 }
 
+// appendField adds "<label><value><suffix>" only when value is non-empty, so an
+// unknown property (e.g. a still image's duration) is omitted rather than shown
+// as an empty stub.
+func appendField(lines []string, label, value, suffix string) []string {
+	if value == "" {
+		return lines
+	}
+
+	return append(lines, label+value+suffix)
+}
+
 func formatStreamLine(s domain.StreamInfo) string {
 	switch s.Type {
 	case domain.StreamTypeVideo:
-		return fmt.Sprintf("Stream %d: video  %s  %dx%d  %sfps  %s", s.Index, s.Codec, s.Width, s.Height, s.FPS, s.PixFmt)
+		parts := []string{fmt.Sprintf("Stream %d: video", s.Index), s.Codec, fmt.Sprintf("%dx%d", s.Width, s.Height)}
+		if s.FPS != "" {
+			parts = append(parts, s.FPS+"fps")
+		}
+
+		if s.PixFmt != "" {
+			parts = append(parts, s.PixFmt)
+		}
+
+		return strings.Join(parts, "  ")
 	case domain.StreamTypeAudio:
-		return fmt.Sprintf("Stream %d: audio  %s  %sHz  %dch", s.Index, s.Codec, s.SampleRate, s.Channels)
+		parts := []string{fmt.Sprintf("Stream %d: audio", s.Index), s.Codec}
+		if s.SampleRate != "" {
+			parts = append(parts, s.SampleRate+"Hz")
+		}
+
+		if s.Channels > 0 {
+			parts = append(parts, strconv.Itoa(s.Channels)+"ch")
+		}
+
+		return strings.Join(parts, "  ")
 	default:
 		return fmt.Sprintf("Stream %d: %s  %s", s.Index, s.Type, s.Codec)
 	}

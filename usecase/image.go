@@ -24,6 +24,10 @@ func NewImageUseCase(renderer Renderer) *ImageUseCase {
 
 // Generate creates an image file based on the provided configuration.
 func (uc *ImageUseCase) Generate(cfg domain.ImageConfig) error {
+	if cfg.Background == "" {
+		cfg.Background = domain.BackgroundSolid
+	}
+
 	if !domain.IsValidBackground(cfg.Background) {
 		return fmt.Errorf("%w: %s (supported: solid, test, gradient, moving)", ErrUnknownBackground, cfg.Background)
 	}

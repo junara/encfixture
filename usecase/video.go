@@ -128,13 +128,17 @@ func NewVideoUseCase(ffmpeg FFmpegExecutor, renderer Renderer) *VideoUseCase {
 
 // Generate creates a video file based on the provided configuration.
 func (uc *VideoUseCase) Generate(cfg domain.VideoConfig) error {
-	err := uc.ffmpeg.CheckAvailable()
-	if err != nil {
-		return fmt.Errorf("ffmpeg availability check failed: %w", err)
+	if cfg.Background == "" {
+		cfg.Background = domain.BackgroundSolid
 	}
 
 	if !domain.IsValidBackground(cfg.Background) {
 		return fmt.Errorf("%w: %s (supported: solid, test, gradient, moving)", ErrUnknownBackground, cfg.Background)
+	}
+
+	err := uc.ffmpeg.CheckAvailable()
+	if err != nil {
+		return fmt.Errorf("ffmpeg availability check failed: %w", err)
 	}
 
 	ext := strings.ToLower(filepath.Ext(cfg.Output))

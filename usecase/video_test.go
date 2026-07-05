@@ -630,6 +630,42 @@ func TestVideoUseCase_Generate_MovingBackgrounds(t *testing.T) {
 	}
 }
 
+func TestVideoUseCase_Generate_EmptyBackgroundIsSolid(t *testing.T) {
+	t.Parallel()
+
+	ffmpeg := &mockFFmpeg{}
+	renderer := newMockRenderer()
+	uc := usecase.NewVideoUseCase(ffmpeg, renderer)
+
+	cfg := domain.VideoConfig{
+		Width:      64,
+		Height:     48,
+		FPS:        30,
+		Duration:   "1",
+		Background: "", // unspecified → solid
+		Color:      "black",
+		Scale:      4,
+		Output:     "test.mp4",
+		Audio:      domain.AudioSilence,
+		SampleRate: 48000,
+		Channels:   2,
+	}
+
+	err := uc.Generate(cfg)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	// An empty background is treated as solid: the simple lavfi path, no frames.
+	if !ffmpeg.runCalled {
+		t.Error("empty background should use the solid (simple) path")
+	}
+
+	if ffmpeg.runWithStdinCalled {
+		t.Error("empty background should not render frames")
+	}
+}
+
 func TestVideoUseCase_Generate_UnknownBackground(t *testing.T) {
 	t.Parallel()
 
