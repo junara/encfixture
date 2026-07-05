@@ -1,6 +1,6 @@
 ---
 name: encfixture
-description: Guide to using `encfixture`, a CLI that generates dummy media files (image / video / audio) for ffmpeg encoding tests. Covers subcommands image / video / audio / batch, overlay placement, background patterns (solid / test bars / scrolling gradient / moving box), video codec selection (h264 / hevc / vp9 / av1 / prores) with CRF / bitrate / pixel format, PNG / JPEG image output, A/V sync test patterns (periodic beep + visual flash), and JSON output.
+description: Guide to using `encfixture`, a CLI that generates dummy media files (image / video / audio) for ffmpeg encoding tests. Covers subcommands image / video / audio / batch / verify, overlay placement, background patterns (solid / test bars / scrolling gradient / moving box), video codec selection (h264 / hevc / vp9 / av1 / prores) with CRF / bitrate / pixel format, PNG / JPEG image output, A/V sync test patterns (periodic beep + visual flash), inspecting files with ffprobe, and JSON output.
 ---
 
 # encfixture — dummy media file generation skill
@@ -19,6 +19,7 @@ encfixture image [flags]          # generate image
 encfixture video [flags]          # generate video
 encfixture audio [flags]          # generate audio
 encfixture batch <file.json>      # run multiple jobs defined in JSON
+encfixture verify <file>          # inspect an existing file via ffprobe
 ```
 
 Common to all commands: pass `--json` to print a structured result to stdout.
@@ -142,6 +143,32 @@ encfixture audio -t noise -d 3 -o noise.mp3
 | `--channels` | `-C` | 2 | Channel count |
 | `--frequency` | `-f` | 440 | Frequency (Hz) |
 | `--output` | `-o` | output.wav | Output path |
+
+## Verifying files
+
+Inspect an existing file's codec, resolution, fps, and duration via ffprobe.
+Handy for a "generate then check" loop.
+
+```bash
+encfixture verify out.mp4            # human-readable
+encfixture verify --json out.mp4     # machine-readable
+```
+
+`--json` shape:
+
+```json
+{
+  "file": "out.mp4",
+  "format": { "formatName": "mov,mp4,...", "duration": "2.000000", "size": "28934", "bitRate": "115736" },
+  "streams": [
+    { "index": 0, "type": "video", "codec": "h264", "width": 1920, "height": 1080, "fps": "30", "pixFmt": "yuv420p" },
+    { "index": 1, "type": "audio", "codec": "aac", "sampleRate": "48000", "channels": 2 }
+  ]
+}
+```
+
+Requires `ffprobe` (ships with ffmpeg). Missing/unreadable files exit non-zero
+with ffprobe's error message.
 
 ## Batch processing
 

@@ -216,6 +216,33 @@ encfixture audio --json -t sine -d 3 -o beep.wav
 | `--frequency` | `-f` | 440 | Frequency (Hz) |
 | `--output` | `-o` | output.wav | Output file path (any format supported by ffmpeg) |
 
+### Verify (inspect)
+
+Inspect an existing media file's container and per-stream properties via ffprobe. Useful for confirming that a generated file (or any file) has the codec, resolution, fps, and duration you expect — including in CI.
+
+```bash
+# Human-readable summary
+encfixture verify test.mp4
+
+# Machine-readable JSON
+encfixture verify --json test.mp4
+```
+
+```
+$ encfixture verify test.mp4
+File:     test.mp4
+Format:   mov,mp4,m4a,3gp,3g2,mj2
+Duration: 2.000000s
+Size:     28934 bytes
+Stream 0: video  h264  1920x1080  30fps  yuv420p
+Stream 1: audio  aac  48000Hz  2ch
+```
+
+```bash
+$ encfixture verify --json test.mp4
+{"file":"test.mp4","format":{"formatName":"mov,mp4,...","duration":"2.000000","size":"28934","bitRate":"115736"},"streams":[{"index":0,"type":"video","codec":"h264","width":1920,"height":1080,"fps":"30","pixFmt":"yuv420p"},{"index":1,"type":"audio","codec":"aac","sampleRate":"48000","channels":2}]}
+```
+
 ### Batch Processing
 
 Run multiple jobs defined in a single JSON file. Useful for CI, exhaustive encoding tests, or generating fixtures across resolutions.

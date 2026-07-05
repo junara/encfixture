@@ -228,6 +228,28 @@ encfixture audio --json -t sine -d 3 -o beep.wav
 | `--frequency` | `-f` | 440 | 周波数（Hz） |
 | `--output` | `-o` | output.wav | 出力ファイルパス（ffmpeg 対応の任意フォーマット） |
 
+### verify（検査）
+
+既存のメディアファイルのコンテナ・各ストリーム情報を ffprobe 経由で検査します。生成したファイル（や任意のファイル）が期待どおりのコーデック・解像度・fps・尺かを確認でき、CI でも使えます。
+
+```bash
+# 人間可読のサマリ
+encfixture verify test.mp4
+
+# 機械可読の JSON
+encfixture verify --json test.mp4
+```
+
+```
+$ encfixture verify test.mp4
+File:     test.mp4
+Format:   mov,mp4,m4a,3gp,3g2,mj2
+Duration: 2.000000s
+Size:     28934 bytes
+Stream 0: video  h264  1920x1080  30fps  yuv420p
+Stream 1: audio  aac  48000Hz  2ch
+```
+
 ### バッチ処理
 
 JSON ファイルで定義した複数ジョブを一括実行します。CI、エンコード網羅テスト、解像度違いのサンプル生成などに便利です。

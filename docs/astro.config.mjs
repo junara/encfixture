@@ -33,6 +33,7 @@ export default defineConfig({
 						{ label: '音声の生成', slug: 'usage/audio', translations: { en: 'Audio' } },
 						{ label: 'オーバーレイ', slug: 'usage/overlay', translations: { en: 'Overlay' } },
 						{ label: 'バッチ処理', slug: 'usage/batch', translations: { en: 'Batch' } },
+						{ label: '検査（verify）', slug: 'usage/verify', translations: { en: 'Verify' } },
 					],
 				},
 				{
