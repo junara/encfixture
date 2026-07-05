@@ -21,6 +21,10 @@ encfixture video --tl frame --tr timecode --bl filename --br "CLIP-001" --center
 # カラーバー背景 + オーバーレイ
 encfixture video -b test --tl frame --tr timecode -d 5 -o colorbar.mp4
 
+# 動きのある背景（コーデックの圧縮特性テスト用）
+encfixture video -b gradient -d 5 -o gradient.mp4
+encfixture video -b moving --tr timecode -d 5 -o moving.mp4
+
 # サイン波音声付き
 encfixture video -c blue -a sine --frequency 1000 --center "BEEP" -o beep.mp4
 
@@ -54,7 +58,7 @@ encfixture video --sync --sync-interval 0.5 -d 5 -o sync_fast.mp4
 | `--height` | `-H` | 1080 | 動画の高さ（px） |
 | `--fps` | `-r` | 30 | フレームレート |
 | `--duration` | `-d` | 10 | 長さ（秒） |
-| `--bg` | `-b` | solid | 背景タイプ: solid, test |
+| `--bg` | `-b` | solid | 背景タイプ: solid, test, gradient, moving |
 | `--color` | `-c` | black | 背景色（名前または #hex） |
 | `--tl` | | | 左上に表示する内容 |
 | `--tr` | | | 右上に表示する内容 |
@@ -85,6 +89,19 @@ encfixture video --sync --sync-interval 0.5 -d 5 -o sync_fast.mp4
 ```bash
 encfixture video --sync --tr timecode -d 10 -o sync.mp4
 ```
+
+## 背景タイプ
+
+`--bg` でフレームを埋める内容を選びます。
+
+| 値 | 説明 |
+|---|---|
+| `solid` | `--color` の単色塗り（既定）。ffmpeg の `color` ソースで生成。 |
+| `test` | 静止した SMPTE 風カラーバー。 |
+| `gradient` | 時間とともに横方向へスクロールする斜めの色勾配。 |
+| `moving` | `--color` の背景上を往復移動する白いボックス。 |
+
+`gradient` と `moving` は実際の動きを加えるため、コーデックの動き推定を働かせ、圧縮対象として意味のある内容になります（単色や静止フレームはほぼ無に圧縮される）。どちらも決定論的で、同じフラグなら常に同じフレームを生成します。フレーム単位で描画するため、オーバーレイや `--sync` と併用できます。
 
 ## コーデックの選択
 

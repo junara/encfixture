@@ -21,6 +21,10 @@ encfixture video --tl frame --tr timecode --bl filename --br "CLIP-001" --center
 # Color bar background + overlays
 encfixture video -b test --tl frame --tr timecode -d 5 -o colorbar.mp4
 
+# Moving backgrounds (motion for codec compression tests)
+encfixture video -b gradient -d 5 -o gradient.mp4
+encfixture video -b moving --tr timecode -d 5 -o moving.mp4
+
 # With sine wave audio
 encfixture video -c blue -a sine --frequency 1000 --center "BEEP" -o beep.mp4
 
@@ -54,7 +58,7 @@ encfixture video --sync --sync-interval 0.5 -d 5 -o sync_fast.mp4
 | `--height` | `-H` | 1080 | Video height (px) |
 | `--fps` | `-r` | 30 | Frames per second |
 | `--duration` | `-d` | 10 | Duration (seconds) |
-| `--bg` | `-b` | solid | Background type: solid, test |
+| `--bg` | `-b` | solid | Background type: solid, test, gradient, moving |
 | `--color` | `-c` | black | Background color (name or #hex) |
 | `--tl` | | | Top-left content |
 | `--tr` | | | Top-right content |
@@ -85,6 +89,19 @@ encfixture video --sync --sync-interval 0.5 -d 5 -o sync_fast.mp4
 ```bash
 encfixture video --sync --tr timecode -d 10 -o sync.mp4
 ```
+
+## Background types
+
+`--bg` selects what fills the frame:
+
+| Value | Description |
+|---|---|
+| `solid` | Flat fill of `--color` (default). Encoded via ffmpeg's `color` source. |
+| `test` | Static SMPTE-style color bars. |
+| `gradient` | A diagonal color gradient that scrolls horizontally over time. |
+| `moving` | A white box that ping-pongs across the frame on the `--color` background. |
+
+`gradient` and `moving` add real motion, which exercises a codec's motion estimation and gives non-trivial content to compress (a solid or static frame compresses to almost nothing). Both are deterministic — the same flags always produce the same frames. They render per frame, so they compose with overlays and `--sync`.
 
 ## Codec selection
 

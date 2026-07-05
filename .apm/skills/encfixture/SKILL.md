@@ -1,6 +1,6 @@
 ---
 name: encfixture
-description: Guide to using `encfixture`, a CLI that generates dummy media files (image / video / audio) for ffmpeg encoding tests. Covers subcommands image / video / audio / batch, overlay placement, video codec selection (h264 / hevc / vp9 / av1 / prores) with CRF / bitrate / pixel format, PNG / JPEG image output, A/V sync test patterns (periodic beep + visual flash), and JSON output.
+description: Guide to using `encfixture`, a CLI that generates dummy media files (image / video / audio) for ffmpeg encoding tests. Covers subcommands image / video / audio / batch, overlay placement, background patterns (solid / test bars / scrolling gradient / moving box), video codec selection (h264 / hevc / vp9 / av1 / prores) with CRF / bitrate / pixel format, PNG / JPEG image output, A/V sync test patterns (periodic beep + visual flash), and JSON output.
 ---
 
 # encfixture — dummy media file generation skill
@@ -52,7 +52,7 @@ encfixture image -c blue -q 75 -o sample.jpg
 |---|---|---|---|
 | `--width` | `-W` | 1920 | Width (px) |
 | `--height` | `-H` | 1080 | Height (px) |
-| `--bg` | `-b` | solid | Background: solid, test |
+| `--bg` | `-b` | solid | Background: solid, test, gradient, moving |
 | `--color` | `-c` | black | Background color (name or #hex) |
 | `--tl` | | | Top-left content |
 | `--tr` | | | Top-right content |
@@ -74,6 +74,10 @@ encfixture video --tl frame --tr timecode -d 5 -o counter.mp4
 
 # Color bars + overlays
 encfixture video -b test --tl frame --tr timecode --bl filename --br "CLIP-001" -d 10 -o full.mp4
+
+# Moving backgrounds (motion for codec compression tests)
+encfixture video -b gradient -d 5 -o gradient.mp4
+encfixture video -b moving --tr timecode -d 5 -o moving.mp4
 
 # With sine-wave audio
 encfixture video -a sine --frequency 1000 -d 3 -o beep.mp4
@@ -99,7 +103,7 @@ encfixture video --sync --sync-interval 0.5 -d 5 -o sync_fast.mp4
 | `--height` | `-H` | 1080 | Height (px) |
 | `--fps` | `-r` | 30 | Frame rate |
 | `--duration` | `-d` | 10 | Length (s) |
-| `--bg` | `-b` | solid | Background: solid, test |
+| `--bg` | `-b` | solid | Background: solid, test, gradient, moving |
 | `--color` | `-c` | black | Background color |
 | `--tl/--tr/--center/--bl/--br` | | | Overlays (same as image) |
 | `--scale` | `-S` | 4 | Text scale factor |

@@ -92,7 +92,7 @@ encfixture image --json --center "TEST" -o test.png
 |---|---|---|---|
 | `--width` | `-W` | 1920 | Image width (px) |
 | `--height` | `-H` | 1080 | Image height (px) |
-| `--bg` | `-b` | solid | Background type: solid, test |
+| `--bg` | `-b` | solid | Background type: solid, test, gradient, moving |
 | `--color` | `-c` | black | Background color (name or #hex) |
 | `--tl` | | | Top-left content |
 | `--tr` | | | Top-right content |
@@ -117,6 +117,10 @@ encfixture video --tl frame --tr timecode --bl filename --br "CLIP-001" --center
 
 # Color bar background + overlays
 encfixture video -b test --tl frame --tr timecode -d 5 -o colorbar.mp4
+
+# Moving backgrounds (motion for codec compression tests)
+encfixture video -b gradient -d 5 -o gradient.mp4
+encfixture video -b moving --tr timecode -d 5 -o moving.mp4
 
 # With sine wave audio
 encfixture video -c blue -a sine --frequency 1000 --center "BEEP" -o beep.mp4
@@ -154,7 +158,7 @@ encfixture video --json --tl frame -d 3 -o test.mp4
 | `--height` | `-H` | 1080 | Video height (px) |
 | `--fps` | `-r` | 30 | Frames per second |
 | `--duration` | `-d` | 10 | Duration (seconds) |
-| `--bg` | `-b` | solid | Background type: solid, test |
+| `--bg` | `-b` | solid | Background type: solid, test, gradient, moving |
 | `--color` | `-c` | black | Background color (name or #hex) |
 | `--tl` | | | Top-left content |
 | `--tr` | | | Top-right content |

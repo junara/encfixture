@@ -40,7 +40,7 @@ encfixture image -c blue --center "SAMPLE" -q 75 -o sample.jpg
 |---|---|---|---|
 | `--width` | `-W` | 1920 | Image width (px) |
 | `--height` | `-H` | 1080 | Image height (px) |
-| `--bg` | `-b` | solid | Background type: solid, test |
+| `--bg` | `-b` | solid | Background type: solid, test, gradient, moving |
 | `--color` | `-c` | black | Background color (name or #hex) |
 | `--tl` | | | Top-left content |
 | `--tr` | | | Top-right content |

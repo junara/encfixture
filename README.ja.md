@@ -98,7 +98,7 @@ encfixture image --json --center "TEST" -o test.png
 |---|---|---|---|
 | `--width` | `-W` | 1920 | 画像の幅（px） |
 | `--height` | `-H` | 1080 | 画像の高さ（px） |
-| `--bg` | `-b` | solid | 背景タイプ: solid, test |
+| `--bg` | `-b` | solid | 背景タイプ: solid, test, gradient, moving |
 | `--color` | `-c` | black | 背景色（名前または #hex） |
 | `--tl` | | | 左上に表示する内容 |
 | `--tr` | | | 右上に表示する内容 |
@@ -126,6 +126,10 @@ encfixture video --center filename -d 5 -o sample.mov
 
 # カラーバー背景 + オーバーレイ
 encfixture video -b test --tl frame --tr timecode -d 5 -o colorbar.mp4
+
+# 動きのある背景（コーデックの圧縮特性テスト用）
+encfixture video -b gradient -d 5 -o gradient.mp4
+encfixture video -b moving --tr timecode -d 5 -o moving.mp4
 
 # サイン波音声付きの動画
 encfixture video -c blue -a sine --frequency 1000 --center "BEEP" -o beep.mp4
@@ -163,7 +167,7 @@ encfixture video --json --tl frame -d 3 -o test.mp4
 | `--height` | `-H` | 1080 | 動画の高さ（px） |
 | `--fps` | `-r` | 30 | フレームレート |
 | `--duration` | `-d` | 10 | 長さ（秒） |
-| `--bg` | `-b` | solid | 背景タイプ: solid, test |
+| `--bg` | `-b` | solid | 背景タイプ: solid, test, gradient, moving |
 | `--color` | `-c` | black | 背景色（名前または #hex） |
 | `--tl` | | | 左上に表示する内容 |
 | `--tr` | | | 右上に表示する内容 |

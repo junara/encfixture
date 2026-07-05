@@ -40,7 +40,7 @@ encfixture image -c blue --center "SAMPLE" -q 75 -o sample.jpg
 |---|---|---|---|
 | `--width` | `-W` | 1920 | 画像の幅（px） |
 | `--height` | `-H` | 1080 | 画像の高さ（px） |
-| `--bg` | `-b` | solid | 背景タイプ: solid, test |
+| `--bg` | `-b` | solid | 背景タイプ: solid, test, gradient, moving |
 | `--color` | `-c` | black | 背景色（名前または #hex） |
 | `--tl` | | | 左上に表示する内容 |
 | `--tr` | | | 右上に表示する内容 |
