@@ -124,6 +124,31 @@ func TestLoadBatch_EncodeFields(t *testing.T) {
 	}
 }
 
+func TestLoadBatch_SyncFields(t *testing.T) {
+	t.Parallel()
+
+	path := writeJSON(t, `{
+  "jobs": [
+    {"type": "video", "output": "s.mp4", "sync": true, "syncInterval": 0.5},
+    {"type": "video", "output": "n.mp4"}
+  ]
+}`)
+
+	batch, err := infrastructure.LoadBatch(path)
+	if err != nil {
+		t.Fatalf("LoadBatch: %v", err)
+	}
+
+	first := batch.Jobs[0].Video
+	if !first.Sync || first.SyncInterval != 0.5 {
+		t.Errorf("sync fields not applied: sync=%v interval=%v", first.Sync, first.SyncInterval)
+	}
+
+	if second := batch.Jobs[1].Video; second.Sync {
+		t.Errorf("sync should default to false, got %v", second.Sync)
+	}
+}
+
 func TestLoadBatch_QualityDefault(t *testing.T) {
 	t.Parallel()
 

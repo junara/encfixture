@@ -15,29 +15,31 @@ import (
 var ErrBatchInvalid = errors.New("invalid batch")
 
 type jobDTO struct {
-	Type       *string  `json:"type"`
-	Width      *int     `json:"width"`
-	Height     *int     `json:"height"`
-	FPS        *int     `json:"fps"`
-	Duration   *string  `json:"duration"`
-	BG         *string  `json:"bg"`
-	Color      *string  `json:"color"`
-	TL         *string  `json:"tl"`
-	TR         *string  `json:"tr"`
-	Center     *string  `json:"center"`
-	BL         *string  `json:"bl"`
-	BR         *string  `json:"br"`
-	Scale      *int     `json:"scale"`
-	Output     *string  `json:"output"`
-	Audio      *string  `json:"audio"`
-	SampleRate *int     `json:"sampleRate"`
-	Channels   *int     `json:"channels"`
-	Frequency  *float64 `json:"frequency"`
-	Codec      *string  `json:"codec"`
-	CRF        *int     `json:"crf"`
-	Bitrate    *string  `json:"bitrate"`
-	PixFmt     *string  `json:"pixFmt"`
-	Quality    *int     `json:"quality"`
+	Type         *string  `json:"type"`
+	Width        *int     `json:"width"`
+	Height       *int     `json:"height"`
+	FPS          *int     `json:"fps"`
+	Duration     *string  `json:"duration"`
+	BG           *string  `json:"bg"`
+	Color        *string  `json:"color"`
+	TL           *string  `json:"tl"`
+	TR           *string  `json:"tr"`
+	Center       *string  `json:"center"`
+	BL           *string  `json:"bl"`
+	BR           *string  `json:"br"`
+	Scale        *int     `json:"scale"`
+	Output       *string  `json:"output"`
+	Audio        *string  `json:"audio"`
+	SampleRate   *int     `json:"sampleRate"`
+	Channels     *int     `json:"channels"`
+	Frequency    *float64 `json:"frequency"`
+	Codec        *string  `json:"codec"`
+	CRF          *int     `json:"crf"`
+	Bitrate      *string  `json:"bitrate"`
+	PixFmt       *string  `json:"pixFmt"`
+	Quality      *int     `json:"quality"`
+	Sync         *bool    `json:"sync"`
+	SyncInterval *float64 `json:"syncInterval"`
 }
 
 type batchDTO struct {
@@ -70,6 +72,7 @@ func LoadBatch(path string) (domain.Batch, error) {
 		BG: nil, Color: nil, TL: nil, TR: nil, Center: nil, BL: nil, BR: nil,
 		Scale: nil, Output: nil, Audio: nil, SampleRate: nil, Channels: nil, Frequency: nil,
 		Codec: nil, CRF: nil, Bitrate: nil, PixFmt: nil, Quality: nil,
+		Sync: nil, SyncInterval: nil,
 	}
 	if dto.Defaults != nil {
 		defaults = *dto.Defaults
@@ -142,23 +145,25 @@ func buildImage(defaults, job *jobDTO, output string) domain.ImageConfig {
 
 func buildVideo(defaults, job *jobDTO, output string) domain.VideoConfig {
 	return domain.VideoConfig{
-		Width:      pickInt(job.Width, defaults.Width, 1920),
-		Height:     pickInt(job.Height, defaults.Height, 1080),
-		FPS:        pickInt(job.FPS, defaults.FPS, 30),
-		Duration:   pickString(job.Duration, defaults.Duration, "10"),
-		Background: pickString(job.BG, defaults.BG, "solid"),
-		Color:      pickString(job.Color, defaults.Color, "black"),
-		Overlay:    buildOverlay(defaults, job),
-		Scale:      pickInt(job.Scale, defaults.Scale, 4),
-		Output:     output,
-		Audio:      domain.AudioType(pickString(job.Audio, defaults.Audio, string(domain.AudioSilence))),
-		SampleRate: pickInt(job.SampleRate, defaults.SampleRate, 48000),
-		Channels:   pickInt(job.Channels, defaults.Channels, 2),
-		Frequency:  pickFloat(job.Frequency, defaults.Frequency, 440.0),
-		Codec:      domain.VideoCodec(pickString(job.Codec, defaults.Codec, "")),
-		CRF:        pickCRF(job.CRF, defaults.CRF),
-		Bitrate:    pickString(job.Bitrate, defaults.Bitrate, ""),
-		PixFmt:     pickString(job.PixFmt, defaults.PixFmt, ""),
+		Width:        pickInt(job.Width, defaults.Width, 1920),
+		Height:       pickInt(job.Height, defaults.Height, 1080),
+		FPS:          pickInt(job.FPS, defaults.FPS, 30),
+		Duration:     pickString(job.Duration, defaults.Duration, "10"),
+		Background:   pickString(job.BG, defaults.BG, "solid"),
+		Color:        pickString(job.Color, defaults.Color, "black"),
+		Overlay:      buildOverlay(defaults, job),
+		Scale:        pickInt(job.Scale, defaults.Scale, 4),
+		Output:       output,
+		Audio:        domain.AudioType(pickString(job.Audio, defaults.Audio, string(domain.AudioSilence))),
+		SampleRate:   pickInt(job.SampleRate, defaults.SampleRate, 48000),
+		Channels:     pickInt(job.Channels, defaults.Channels, 2),
+		Frequency:    pickFloat(job.Frequency, defaults.Frequency, 440.0),
+		Codec:        domain.VideoCodec(pickString(job.Codec, defaults.Codec, "")),
+		CRF:          pickCRF(job.CRF, defaults.CRF),
+		Bitrate:      pickString(job.Bitrate, defaults.Bitrate, ""),
+		PixFmt:       pickString(job.PixFmt, defaults.PixFmt, ""),
+		Sync:         pickBool(job.Sync, defaults.Sync, false),
+		SyncInterval: pickFloat(job.SyncInterval, defaults.SyncInterval, 0),
 	}
 }
 
@@ -219,6 +224,18 @@ func pickInt(primary, fallback *int, def int) int {
 }
 
 func pickFloat(primary, fallback *float64, def float64) float64 {
+	if primary != nil {
+		return *primary
+	}
+
+	if fallback != nil {
+		return *fallback
+	}
+
+	return def
+}
+
+func pickBool(primary, fallback *bool, def bool) bool {
 	if primary != nil {
 		return *primary
 	}
