@@ -1,6 +1,6 @@
 ---
 name: encfixture
-description: Guide to using `encfixture`, a CLI that generates dummy media files (image / video / audio) for ffmpeg encoding tests. Covers subcommands image / video / audio / batch, overlay placement, and JSON output.
+description: Guide to using `encfixture`, a CLI that generates dummy media files (image / video / audio) for ffmpeg encoding tests. Covers subcommands image / video / audio / batch, overlay placement, video codec selection (h264 / hevc / vp9 / av1 / prores) with CRF / bitrate / pixel format, PNG / JPEG image output, and JSON output.
 ---
 
 # encfixture — dummy media file generation skill
@@ -260,4 +260,32 @@ encfixture image --center "THUMBNAIL" -o test_thumb.png
 
 ```bash
 encfixture batch fixtures.json --json
+```
+
+### Codec coverage set (same content across codecs)
+
+Generate one clip per codec to test a decoder / pipeline against multiple encoders.
+
+`codecs.json`:
+
+```json
+{
+  "defaults": { "type": "video", "duration": "5", "tl": "frame", "tr": "timecode" },
+  "jobs": [
+    { "output": "cov_h264.mp4", "codec": "h264", "crf": 23 },
+    { "output": "cov_hevc.mp4", "codec": "hevc", "crf": 28 },
+    { "output": "cov_vp9.webm", "codec": "vp9" },
+    { "output": "cov_prores.mov", "codec": "prores" }
+  ]
+}
+```
+
+```bash
+encfixture batch codecs.json --json
+```
+
+Verify the encoded codec / pixel format with `ffprobe`:
+
+```bash
+ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,pix_fmt -of csv=p=0 cov_hevc.mp4
 ```
