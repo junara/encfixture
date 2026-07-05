@@ -184,6 +184,10 @@ linters:
           - exhaustruct
           - err113
           - gosec
+      - path: infrastructure/ffprobe\.go
+        linters:
+          # ffprobe's JSON output uses snake_case field names we must match.
+          - tagliatelle
 
 formatters:
   enable:

@@ -16,6 +16,12 @@ type FFmpegExecutor interface {
 	CheckAvailable() error
 }
 
+// Prober inspects the properties of an existing media file.
+type Prober interface {
+	CheckAvailable() error
+	Probe(path string) (domain.MediaInfo, error)
+}
+
 // Renderer defines the interface for image rendering operations.
 type Renderer interface {
 	SolidImage(width, height int, c color.Color) *image.RGBA
