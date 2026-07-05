@@ -33,9 +33,9 @@ func (uc *ImageUseCase) Generate(cfg domain.ImageConfig) error {
 		uc.renderer.DrawScaledTextAt(img, text, textColor, cfg.Scale, entry.Position)
 	}
 
-	writeErr := uc.renderer.WritePNG(cfg.Output, img)
+	writeErr := uc.renderer.WriteImage(cfg.Output, img, cfg.Quality)
 	if writeErr != nil {
-		return fmt.Errorf("write PNG failed: %w", writeErr)
+		return fmt.Errorf("write image failed: %w", writeErr)
 	}
 
 	return nil

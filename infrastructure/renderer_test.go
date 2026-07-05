@@ -1,7 +1,11 @@
 package infrastructure_test
 
 import (
+	"errors"
+	"image"
 	"image/color"
+	_ "image/jpeg" // register JPEG decoder for DecodeConfig
+	_ "image/png"  // register PNG decoder for DecodeConfig
 	"os"
 	"path/filepath"
 	"testing"
@@ -138,27 +142,62 @@ func TestImageRenderer_FormatTimecode(t *testing.T) {
 	}
 }
 
-func TestImageRenderer_WritePNG(t *testing.T) {
+func TestImageRenderer_WriteImage(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		filename   string
+		quality    int
+		wantFormat string
+	}{
+		{"png", "test.png", 0, "png"},
+		{"jpg", "test.jpg", 75, "jpeg"},
+		{"jpeg uppercase ext", "test.JPEG", 0, "jpeg"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := infrastructure.NewImageRenderer()
+			img := r.SolidImage(10, 10, color.Black)
+			path := filepath.Join(t.TempDir(), tt.filename)
+
+			err := r.WriteImage(path, img, tt.quality)
+			if err != nil {
+				t.Fatalf("WriteImage() error = %v", err)
+			}
+
+			file, openErr := os.Open(path)
+			if openErr != nil {
+				t.Fatalf("output file not found: %v", openErr)
+			}
+
+			defer func() { _ = file.Close() }()
+
+			_, format, decodeErr := image.DecodeConfig(file)
+			if decodeErr != nil {
+				t.Fatalf("output file is not a decodable image: %v", decodeErr)
+			}
+
+			if format != tt.wantFormat {
+				t.Errorf("output format = %q, want %q", format, tt.wantFormat)
+			}
+		})
+	}
+}
+
+func TestImageRenderer_WriteImage_UnsupportedFormat(t *testing.T) {
 	t.Parallel()
 
 	r := infrastructure.NewImageRenderer()
 	img := r.SolidImage(10, 10, color.Black)
+	path := filepath.Join(t.TempDir(), "test.gif")
 
-	dir := t.TempDir()
-	path := filepath.Join(dir, "test.png")
-
-	err := r.WritePNG(path, img)
-	if err != nil {
-		t.Fatalf("WritePNG() error = %v", err)
-	}
-
-	info, statErr := os.Stat(path)
-	if statErr != nil {
-		t.Fatalf("output file not found: %v", statErr)
-	}
-
-	if info.Size() == 0 {
-		t.Error("output file is empty")
+	err := r.WriteImage(path, img, 0)
+	if !errors.Is(err, infrastructure.ErrUnsupportedImageFormat) {
+		t.Fatalf("WriteImage() error = %v, want ErrUnsupportedImageFormat", err)
 	}
 }
 

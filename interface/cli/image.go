@@ -41,7 +41,8 @@ func init() {
 	imageCmd.Flags().String("bl", "", "Bottom-left content (frame, timecode, filename, or text)")
 	imageCmd.Flags().String("br", "", "Bottom-right content (frame, timecode, filename, or text)")
 	imageCmd.Flags().IntP("scale", "S", 4, "Text scale factor")
-	imageCmd.Flags().StringP("output", "o", "output.png", "Output file path")
+	imageCmd.Flags().StringP("output", "o", "output.png", "Output file path (.png, .jpg, .jpeg)")
+	imageCmd.Flags().IntP("quality", "q", 90, "JPEG quality 1-100 (for .jpg/.jpeg output)")
 }
 
 func runImage(cmd *cobra.Command, _ []string) error {
@@ -56,6 +57,7 @@ func runImage(cmd *cobra.Command, _ []string) error {
 	br, _ := cmd.Flags().GetString("br")
 	scale, _ := cmd.Flags().GetInt("scale")
 	output, _ := cmd.Flags().GetString("output")
+	quality, _ := cmd.Flags().GetInt("quality")
 
 	cfg := domain.ImageConfig{
 		Width:      width,
@@ -69,8 +71,9 @@ func runImage(cmd *cobra.Command, _ []string) error {
 			BottomLeft:  bl,
 			BottomRight: br,
 		},
-		Scale:  scale,
-		Output: output,
+		Scale:   scale,
+		Output:  output,
+		Quality: quality,
 	}
 
 	renderer := infrastructure.NewImageRenderer()

@@ -103,7 +103,7 @@ func TestBatchUseCase_Generate_FailFast(t *testing.T) {
 	failingErr := errors.New("boom")
 	ffmpeg := &mockFFmpeg{runErr: failingErr, runWithStdinErr: failingErr}
 	renderer := newMockRenderer()
-	renderer.writePNGErr = failingErr
+	renderer.writeImageErr = failingErr
 	uc := usecase.NewBatchUseCase(
 		usecase.NewImageUseCase(renderer),
 		usecase.NewVideoUseCase(ffmpeg, renderer),

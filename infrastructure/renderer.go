@@ -1,11 +1,15 @@
 package infrastructure
 
 import (
+	"errors"
 	"fmt"
 	"image"
 	"image/color"
+	"image/jpeg"
 	"image/png"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/junara/encfixture/domain"
 
@@ -21,7 +25,12 @@ const (
 	secondsPerMinute   = 60
 	luminanceThreshold = 0.5
 	maxColorComponentF = 65535.0
+	defaultJPEGQuality = 90
+	maxJPEGQuality     = 100
 )
+
+// ErrUnsupportedImageFormat indicates the output extension maps to no known image encoder.
+var ErrUnsupportedImageFormat = errors.New("unsupported image format")
 
 // ImageRenderer provides image rendering and manipulation operations.
 type ImageRenderer struct{}
@@ -208,8 +217,15 @@ func (r *ImageRenderer) DrawTestPattern(img *image.RGBA) {
 	}
 }
 
-// WritePNG writes an RGBA image to a PNG file at the given path.
-func (r *ImageRenderer) WritePNG(path string, img *image.RGBA) error {
+// WriteImage writes an RGBA image to a file, selecting the encoder from the
+// file extension (.png, .jpg, .jpeg). quality applies to JPEG only (1-100);
+// out-of-range values fall back to the default of 90.
+func (r *ImageRenderer) WriteImage(path string, img *image.RGBA, quality int) error {
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext != ".png" && ext != ".jpg" && ext != ".jpeg" {
+		return fmt.Errorf("%w: %q (supported: .png, .jpg, .jpeg)", ErrUnsupportedImageFormat, ext)
+	}
+
 	file, err := os.Create(path) //nolint:gosec // path is provided by the user via CLI flags
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
@@ -219,9 +235,20 @@ func (r *ImageRenderer) WritePNG(path string, img *image.RGBA) error {
 		_ = file.Close()
 	}()
 
-	encodeErr := png.Encode(file, img)
+	var encodeErr error
+
+	if ext == ".png" {
+		encodeErr = png.Encode(file, img)
+	} else {
+		if quality < 1 || quality > maxJPEGQuality {
+			quality = defaultJPEGQuality
+		}
+
+		encodeErr = jpeg.Encode(file, img, &jpeg.Options{Quality: quality})
+	}
+
 	if encodeErr != nil {
-		return fmt.Errorf("PNG encoding failed: %w", encodeErr)
+		return fmt.Errorf("image encoding failed: %w", encodeErr)
 	}
 
 	return nil

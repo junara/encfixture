@@ -131,6 +131,7 @@ type ImageConfig struct {
 	Overlay    Overlay
 	Scale      int
 	Output     string
+	Quality    int // JPEG quality (1-100); ignored for PNG output
 }
 
 // VideoConfig holds the configuration for video generation.

@@ -51,9 +51,10 @@ type mockRenderer struct {
 	solidImageCalled      bool
 	drawTextAtCalls       []drawTextAtCall
 	drawTestPatternCalled bool
-	writePNGCalled        bool
-	writePNGPath          string
-	writePNGErr           error
+	writeImageCalled      bool
+	writeImagePath        string
+	writeImageQuality     int
+	writeImageErr         error
 	parseColorResult      color.Color
 	contrastColorResult   color.Color
 }
@@ -87,11 +88,12 @@ func (m *mockRenderer) DrawTestPattern(_ *image.RGBA) {
 	m.drawTestPatternCalled = true
 }
 
-func (m *mockRenderer) WritePNG(path string, _ *image.RGBA) error {
-	m.writePNGCalled = true
-	m.writePNGPath = path
+func (m *mockRenderer) WriteImage(path string, _ *image.RGBA, quality int) error {
+	m.writeImageCalled = true
+	m.writeImagePath = path
+	m.writeImageQuality = quality
 
-	return m.writePNGErr
+	return m.writeImageErr
 }
 
 func (m *mockRenderer) ParseColor(_ string) color.Color {

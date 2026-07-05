@@ -32,12 +32,38 @@ func TestImageUseCase_Generate_Solid(t *testing.T) {
 		t.Error("SolidImage was not called")
 	}
 
-	if !renderer.writePNGCalled {
-		t.Error("WritePNG was not called")
+	if !renderer.writeImageCalled {
+		t.Error("WriteImage was not called")
 	}
 
-	if renderer.writePNGPath != "test.png" {
-		t.Errorf("WritePNG path = %q, want %q", renderer.writePNGPath, "test.png")
+	if renderer.writeImagePath != "test.png" {
+		t.Errorf("WriteImage path = %q, want %q", renderer.writeImagePath, "test.png")
+	}
+}
+
+func TestImageUseCase_Generate_PassesQuality(t *testing.T) {
+	t.Parallel()
+
+	renderer := newMockRenderer()
+	uc := usecase.NewImageUseCase(renderer)
+
+	cfg := domain.ImageConfig{
+		Width:      640,
+		Height:     480,
+		Background: "solid",
+		Color:      "black",
+		Output:     "test.jpg",
+		Scale:      4,
+		Quality:    75,
+	}
+
+	err := uc.Generate(cfg)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	if renderer.writeImageQuality != 75 {
+		t.Errorf("WriteImage quality = %d, want 75", renderer.writeImageQuality)
 	}
 }
 
@@ -120,11 +146,11 @@ func TestImageUseCase_Generate_AllOverlays(t *testing.T) {
 	}
 }
 
-func TestImageUseCase_Generate_WritePNGError(t *testing.T) {
+func TestImageUseCase_Generate_WriteImageError(t *testing.T) {
 	t.Parallel()
 
 	renderer := newMockRenderer()
-	renderer.writePNGErr = errors.New("disk full")
+	renderer.writeImageErr = errors.New("disk full")
 	uc := usecase.NewImageUseCase(renderer)
 
 	cfg := domain.ImageConfig{
