@@ -41,6 +41,9 @@ encfixture image --tl frame --tr timecode --bl filename --br "ID-001" --center "
 
 # Custom resolution
 encfixture image -W 3840 -H 2160 -o 4k.png
+
+# JPEG output with quality (extension picks the format: .png / .jpg / .jpeg)
+encfixture image -c blue -q 75 -o sample.jpg
 ```
 
 ### image flags
@@ -57,7 +60,8 @@ encfixture image -W 3840 -H 2160 -o 4k.png
 | `--bl` | | | Bottom-left content |
 | `--br` | | | Bottom-right content |
 | `--scale` | `-S` | 4 | Text scale factor |
-| `--output` | `-o` | output.png | Output path |
+| `--output` | `-o` | output.png | Output path (.png, .jpg, .jpeg) |
+| `--quality` | `-q` | 90 | JPEG quality 1-100 (.jpg/.jpeg only) |
 
 ## Generating videos
 
@@ -76,6 +80,11 @@ encfixture video -a sine --frequency 1000 -d 3 -o beep.mp4
 
 # Custom resolution / fps
 encfixture video -W 3840 -H 2160 -r 60 -d 10 -o 4k60.mp4
+
+# Specific codec / quality
+encfixture video --codec hevc --crf 28 -d 5 -o hevc.mp4
+encfixture video --codec prores -d 5 -o prores.mov
+encfixture video --codec h264 --bitrate 5M --pix-fmt yuv420p -d 5 -o cbr.mp4
 ```
 
 ### video flags
@@ -95,6 +104,10 @@ encfixture video -W 3840 -H 2160 -r 60 -d 10 -o 4k60.mp4
 | `--sample-rate` | `-s` | 48000 | Sample rate |
 | `--channels` | `-C` | 2 | Channel count |
 | `--frequency` | | 440 | Frequency (Hz) |
+| `--codec` | | | Video codec: h264, hevc, vp9, av1, prores (default: container default) |
+| `--crf` | | | CRF for h264/hevc/vp9/av1 (default: encoder default) |
+| `--bitrate` | | | Video bitrate, e.g. `5M` (default: encoder default) |
+| `--pix-fmt` | | | Pixel format, e.g. `yuv420p` (default: codec-dependent; prores uses `yuv422p10le`) |
 
 ## Generating audio
 
@@ -142,7 +155,8 @@ encfixture batch jobs.json [--parallel N] [--fail-fast] [--json]
 ```
 
 - `type` and `output` are required. Other fields mirror the corresponding subcommand flags.
-- `--sample-rate` becomes `sampleRate` (camelCase) in JSON.
+- `--sample-rate` becomes `sampleRate` and `--pix-fmt` becomes `pixFmt` (camelCase) in JSON.
+- Video jobs also accept `codec`, `crf`, `bitrate`, `pixFmt`; image jobs accept `quality`.
 - `defaults` applies to all jobs and can be overridden per job.
 
 ### batch flags

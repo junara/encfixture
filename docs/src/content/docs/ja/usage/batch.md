@@ -49,6 +49,11 @@ encfixture batch jobs.json
 | `sampleRate` | `--sample-rate` | int | video, audio |
 | `channels` | `--channels` | int | video, audio |
 | `frequency` | `--frequency` | float | video, audio |
+| `codec` | `--codec` | string | video |
+| `crf` | `--crf` | int | video |
+| `bitrate` | `--bitrate` | string | video |
+| `pixFmt` | `--pix-fmt` | string | video |
+| `quality` | `--quality` | int | image |
 
 ## CLI フラグ
 

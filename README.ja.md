@@ -82,6 +82,9 @@ encfixture image -W 3840 -H 2160 -c white -o 4k.png
 # 16進カラーコードで色を指定
 encfixture image -c "#ff6600" -o orange.png
 
+# JPEG 出力（品質指定）
+encfixture image -c blue --center "SAMPLE" -q 75 -o sample.jpg
+
 # カラーバー + テキストオーバーレイ
 encfixture image -b test --center "SAMPLE" -o test_with_text.png
 
@@ -103,7 +106,8 @@ encfixture image --json --center "TEST" -o test.png
 | `--bl` | | | 左下に表示する内容 |
 | `--br` | | | 右下に表示する内容 |
 | `--scale` | `-S` | 4 | テキストの拡大率 |
-| `--output` | `-o` | output.png | 出力ファイルパス |
+| `--output` | `-o` | output.png | 出力ファイルパス（.png, .jpg, .jpeg） |
+| `--quality` | `-q` | 90 | JPEG 品質 1-100（.jpg/.jpeg 出力時） |
 
 ### 動画の生成
 
@@ -132,6 +136,15 @@ encfixture video --tl frame -d 5 -o test.webm
 # 解像度と FPS を指定
 encfixture video -W 3840 -H 2160 -r 60 -d 10 --tl frame -o 4k60.mp4
 
+# コーデックと品質を指定（HEVC、CRF 28）
+encfixture video --codec hevc --crf 28 --tl frame -d 5 -o hevc.mp4
+
+# 編集ワークフロー向け ProRes（デフォルトで 10bit 4:2:2）
+encfixture video --codec prores -d 5 -o prores.mov
+
+# 固定ビットレートとピクセルフォーマットを指定
+encfixture video --codec h264 --bitrate 5M --pix-fmt yuv420p -d 5 -o cbr.mp4
+
 # JSON 出力
 encfixture video --json --tl frame -d 3 -o test.mp4
 ```
@@ -157,6 +170,10 @@ encfixture video --json --tl frame -d 3 -o test.mp4
 | `--sample-rate` | `-s` | 48000 | 音声サンプルレート |
 | `--channels` | `-C` | 2 | 音声チャンネル数 |
 | `--frequency` | | 440 | 音声の周波数（Hz） |
+| `--codec` | | | 動画コーデック: h264, hevc, vp9, av1, prores（デフォルト: コンテナ既定） |
+| `--crf` | | | CRF 値（h264/hevc/vp9/av1 向け。デフォルト: エンコーダ既定） |
+| `--bitrate` | | | 動画ビットレート（例: `5M`, `800k`。デフォルト: エンコーダ既定） |
+| `--pix-fmt` | | | ピクセルフォーマット（例: `yuv420p`, `yuv422p10le`。デフォルト: コーデック依存） |
 
 ### 音声の生成
 
@@ -218,7 +235,7 @@ encfixture batch jobs.json
 }
 ```
 
-各ジョブには `type` と `output` が必須です。その他のフィールドは対応するサブコマンドのフラグと同じ意味です（`--sample-rate` は JSON では `sampleRate` と書きます）。トップレベルの `defaults` は全ジョブに適用され、各ジョブで個別に上書きできます。未知のフィールドはエラーになり typo を早期検出できます。
+各ジョブには `type` と `output` が必須です。その他のフィールドは対応するサブコマンドのフラグと同じ意味です（`--sample-rate` は JSON では `sampleRate`、`--pix-fmt` は `pixFmt` と書きます）。トップレベルの `defaults` は全ジョブに適用され、各ジョブで個別に上書きできます。未知のフィールドはエラーになり typo を早期検出できます。
 
 ```bash
 # 並列度を制限し、最初の失敗で残りをスキップ

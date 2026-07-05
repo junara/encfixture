@@ -29,6 +29,9 @@ encfixture image -c "#ff6600" -o orange.png
 
 # カラーバー + テキストオーバーレイ
 encfixture image -b test --center "SAMPLE" -o test_with_text.png
+
+# JPEG 出力（品質指定）
+encfixture image -c blue --center "SAMPLE" -q 75 -o sample.jpg
 ```
 
 ## フラグ
@@ -45,4 +48,9 @@ encfixture image -b test --center "SAMPLE" -o test_with_text.png
 | `--bl` | | | 左下に表示する内容 |
 | `--br` | | | 右下に表示する内容 |
 | `--scale` | `-S` | 4 | テキストの拡大率 |
-| `--output` | `-o` | output.png | 出力ファイルパス |
+| `--output` | `-o` | output.png | 出力ファイルパス（.png, .jpg, .jpeg） |
+| `--quality` | `-q` | 90 | JPEG 品質 1-100（.jpg/.jpeg 出力時） |
+
+## 出力フォーマット
+
+エンコーダは拡張子から決まります。`.png` は PNG、`.jpg` / `.jpeg` は JPEG で出力されます。それ以外の拡張子はエラーになります。

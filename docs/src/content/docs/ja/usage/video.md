@@ -29,6 +29,15 @@ encfixture video --tl frame -d 5 -o test.webm
 
 # 解像度と FPS を指定
 encfixture video -W 3840 -H 2160 -r 60 -d 10 --tl frame -o 4k60.mp4
+
+# コーデックと品質を指定（HEVC、CRF 28）
+encfixture video --codec hevc --crf 28 --tl frame -d 5 -o hevc.mp4
+
+# 編集ワークフロー向け ProRes（デフォルトで 10bit 4:2:2）
+encfixture video --codec prores -d 5 -o prores.mov
+
+# 固定ビットレートとピクセルフォーマットを指定
+encfixture video --codec h264 --bitrate 5M --pix-fmt yuv420p -d 5 -o cbr.mp4
 ```
 
 ## フラグ
@@ -52,3 +61,21 @@ encfixture video -W 3840 -H 2160 -r 60 -d 10 --tl frame -o 4k60.mp4
 | `--sample-rate` | `-s` | 48000 | 音声サンプルレート |
 | `--channels` | `-C` | 2 | 音声チャンネル数 |
 | `--frequency` | | 440 | 音声の周波数（Hz） |
+| `--codec` | | | 動画コーデック: h264, hevc, vp9, av1, prores（デフォルト: コンテナ既定） |
+| `--crf` | | | CRF 値（h264/hevc/vp9/av1 向け。デフォルト: エンコーダ既定） |
+| `--bitrate` | | | 動画ビットレート（例: `5M`, `800k`。デフォルト: エンコーダ既定） |
+| `--pix-fmt` | | | ピクセルフォーマット（例: `yuv420p`, `yuv422p10le`。デフォルト: コーデック依存） |
+
+## コーデックの選択
+
+`--codec` は以下の ffmpeg エンコーダにマッピングされます。
+
+| 値 | エンコーダ | 備考 |
+|---|---|---|
+| `h264` | libx264 | |
+| `hevc` | libx265 | |
+| `vp9` | libvpx-vp9 | `.webm` 出力時のデフォルト |
+| `av1` | libaom-av1 | 低速なので短い動画向け |
+| `prores` | prores_ks | ピクセルフォーマットは `yuv422p10le` がデフォルト |
+
+`--codec` 未指定時はコンテナの既定コーデックが使われます（`.mp4` なら H.264、`.webm` なら VP9）。

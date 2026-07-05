@@ -79,6 +79,9 @@ encfixture image -W 3840 -H 2160 -c white -o 4k.png
 # Hex color code
 encfixture image -c "#ff6600" -o orange.png
 
+# JPEG output with quality
+encfixture image -c blue --center "SAMPLE" -q 75 -o sample.jpg
+
 # JSON output
 encfixture image --json --center "TEST" -o test.png
 ```
@@ -97,7 +100,8 @@ encfixture image --json --center "TEST" -o test.png
 | `--bl` | | | Bottom-left content |
 | `--br` | | | Bottom-right content |
 | `--scale` | `-S` | 4 | Text scale factor |
-| `--output` | `-o` | output.png | Output file path |
+| `--output` | `-o` | output.png | Output file path (.png, .jpg, .jpeg) |
+| `--quality` | `-q` | 90 | JPEG quality 1-100 (for .jpg/.jpeg output) |
 
 ### Video Generation
 
@@ -122,6 +126,15 @@ encfixture video --tl frame -d 5 -o test.webm
 
 # Custom resolution and FPS
 encfixture video -W 3840 -H 2160 -r 60 -d 10 --tl frame -o 4k60.mp4
+
+# Specific codec and quality (HEVC, CRF 28)
+encfixture video --codec hevc --crf 28 --tl frame -d 5 -o hevc.mp4
+
+# ProRes for editing workflows (10bit 4:2:2 by default)
+encfixture video --codec prores -d 5 -o prores.mov
+
+# Fixed bitrate and pixel format
+encfixture video --codec h264 --bitrate 5M --pix-fmt yuv420p -d 5 -o cbr.mp4
 
 # JSON output
 encfixture video --json --tl frame -d 3 -o test.mp4
@@ -148,6 +161,10 @@ encfixture video --json --tl frame -d 3 -o test.mp4
 | `--sample-rate` | `-s` | 48000 | Audio sample rate |
 | `--channels` | `-C` | 2 | Audio channels |
 | `--frequency` | | 440 | Tone frequency (Hz) |
+| `--codec` | | | Video codec: h264, hevc, vp9, av1, prores (default: container default) |
+| `--crf` | | | Constant rate factor for h264/hevc/vp9/av1 (default: encoder default) |
+| `--bitrate` | | | Video bitrate, e.g. `5M` or `800k` (default: encoder default) |
+| `--pix-fmt` | | | Pixel format, e.g. `yuv420p`, `yuv422p10le` (default: codec-dependent) |
 
 ### Audio Generation
 
@@ -206,7 +223,7 @@ encfixture batch jobs.json
 }
 ```
 
-`type` and `output` are required on each job. Other fields map to the flags of the matching subcommand (use `sampleRate` in JSON instead of `--sample-rate`). Values in the top-level `defaults` object are applied to every job and can be overridden per-job. Unknown fields are rejected to catch typos early.
+`type` and `output` are required on each job. Other fields map to the flags of the matching subcommand (use `sampleRate` in JSON instead of `--sample-rate`, and `pixFmt` instead of `--pix-fmt`). Values in the top-level `defaults` object are applied to every job and can be overridden per-job. Unknown fields are rejected to catch typos early.
 
 ```bash
 # Cap concurrency and stop scheduling after the first failure

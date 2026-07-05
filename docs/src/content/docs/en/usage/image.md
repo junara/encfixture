@@ -29,6 +29,9 @@ encfixture image -c "#ff6600" -o orange.png
 
 # Color bar + text overlay
 encfixture image -b test --center "SAMPLE" -o test_with_text.png
+
+# JPEG output with quality
+encfixture image -c blue --center "SAMPLE" -q 75 -o sample.jpg
 ```
 
 ## Flags
@@ -45,4 +48,9 @@ encfixture image -b test --center "SAMPLE" -o test_with_text.png
 | `--bl` | | | Bottom-left content |
 | `--br` | | | Bottom-right content |
 | `--scale` | `-S` | 4 | Text scale factor |
-| `--output` | `-o` | output.png | Output file path |
+| `--output` | `-o` | output.png | Output file path (.png, .jpg, .jpeg) |
+| `--quality` | `-q` | 90 | JPEG quality 1-100 (for .jpg/.jpeg output) |
+
+## Output formats
+
+The encoder is selected from the file extension: `.png` produces PNG, `.jpg`/`.jpeg` produces JPEG. Other extensions are rejected with an error.
