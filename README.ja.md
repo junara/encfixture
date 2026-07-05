@@ -145,6 +145,12 @@ encfixture video --codec prores -d 5 -o prores.mov
 # 固定ビットレートとピクセルフォーマットを指定
 encfixture video --codec h264 --bitrate 5M --pix-fmt yuv420p -d 5 -o cbr.mp4
 
+# A/V シンクテストパターン（毎秒ビープ音 + 白フラッシュ）
+encfixture video --sync --tr timecode -d 10 -o sync.mp4
+
+# マーカー間隔を 0.5 秒に指定
+encfixture video --sync --sync-interval 0.5 -d 5 -o sync_fast.mp4
+
 # JSON 出力
 encfixture video --json --tl frame -d 3 -o test.mp4
 ```
@@ -174,6 +180,10 @@ encfixture video --json --tl frame -d 3 -o test.mp4
 | `--crf` | | | CRF 値（h264/hevc/vp9/av1 向け。デフォルト: エンコーダ既定） |
 | `--bitrate` | | | 動画ビットレート（例: `5M`, `800k`。デフォルト: エンコーダ既定） |
 | `--pix-fmt` | | | ピクセルフォーマット（例: `yuv420p`, `yuv422p10le`。デフォルト: コーデック依存） |
+| `--sync` | | false | A/V シンクテストパターン: 各マーカーでビープ音と白フラッシュが同時に発生 |
+| `--sync-interval` | | 1.0 | シンクマーカーの間隔（秒） |
+
+`--sync` を指定すると、各間隔の先頭で画面全体の白フラッシュとビープ音（音程は `--frequency`）が同時に約0.08秒間発生します。`--tr timecode` などのオーバーレイはそのまま描画されるので、どのマーカーでズレたか読み取れます。`--sync` は `--audio` より優先されます。
 
 ### 音声の生成
 

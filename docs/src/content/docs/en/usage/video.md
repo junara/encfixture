@@ -38,6 +38,12 @@ encfixture video --codec prores -d 5 -o prores.mov
 
 # Fixed bitrate and pixel format
 encfixture video --codec h264 --bitrate 5M --pix-fmt yuv420p -d 5 -o cbr.mp4
+
+# A/V sync test pattern (beep + white flash every second)
+encfixture video --sync --tr timecode -d 10 -o sync.mp4
+
+# A/V sync with a 0.5s marker interval
+encfixture video --sync --sync-interval 0.5 -d 5 -o sync_fast.mp4
 ```
 
 ## Flags
@@ -65,6 +71,20 @@ encfixture video --codec h264 --bitrate 5M --pix-fmt yuv420p -d 5 -o cbr.mp4
 | `--crf` | | | Constant rate factor for h264/hevc/vp9/av1 (default: encoder default) |
 | `--bitrate` | | | Video bitrate, e.g. `5M` or `800k` (default: encoder default) |
 | `--pix-fmt` | | | Pixel format, e.g. `yuv420p`, `yuv422p10le` (default: codec-dependent) |
+| `--sync` | | false | A/V sync test pattern: a beep and a white flash fire together at each marker |
+| `--sync-interval` | | 1.0 | Seconds between sync markers |
+
+## A/V sync test pattern
+
+`--sync` generates a pattern for detecting audio/video drift. At the start of every interval (`--sync-interval`, default 1s), a white full-frame flash and a beep fire together, each lasting ~0.08s. If the beep and flash appear at different times during playback, the file (or the pipeline that produced it) has A/V desync.
+
+- The beep pitch comes from `--frequency` (default 440Hz).
+- Overlays such as `--tr timecode` still render, so you can identify which marker drifted.
+- `--sync` overrides `--audio` (the beep track replaces the chosen audio source).
+
+```bash
+encfixture video --sync --tr timecode -d 10 -o sync.mp4
+```
 
 ## Codec selection
 

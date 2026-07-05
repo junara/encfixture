@@ -1,6 +1,6 @@
 ---
 name: encfixture
-description: Guide to using `encfixture`, a CLI that generates dummy media files (image / video / audio) for ffmpeg encoding tests. Covers subcommands image / video / audio / batch, overlay placement, video codec selection (h264 / hevc / vp9 / av1 / prores) with CRF / bitrate / pixel format, PNG / JPEG image output, and JSON output.
+description: Guide to using `encfixture`, a CLI that generates dummy media files (image / video / audio) for ffmpeg encoding tests. Covers subcommands image / video / audio / batch, overlay placement, video codec selection (h264 / hevc / vp9 / av1 / prores) with CRF / bitrate / pixel format, PNG / JPEG image output, A/V sync test patterns (periodic beep + visual flash), and JSON output.
 ---
 
 # encfixture — dummy media file generation skill
@@ -85,6 +85,10 @@ encfixture video -W 3840 -H 2160 -r 60 -d 10 -o 4k60.mp4
 encfixture video --codec hevc --crf 28 -d 5 -o hevc.mp4
 encfixture video --codec prores -d 5 -o prores.mov
 encfixture video --codec h264 --bitrate 5M --pix-fmt yuv420p -d 5 -o cbr.mp4
+
+# A/V sync test pattern (beep + white flash every second; overrides --audio)
+encfixture video --sync --tr timecode -d 10 -o sync.mp4
+encfixture video --sync --sync-interval 0.5 -d 5 -o sync_fast.mp4
 ```
 
 ### video flags
@@ -108,6 +112,8 @@ encfixture video --codec h264 --bitrate 5M --pix-fmt yuv420p -d 5 -o cbr.mp4
 | `--crf` | | | CRF for h264/hevc/vp9/av1 (default: encoder default) |
 | `--bitrate` | | | Video bitrate, e.g. `5M` (default: encoder default) |
 | `--pix-fmt` | | | Pixel format, e.g. `yuv420p` (default: codec-dependent; prores uses `yuv422p10le`) |
+| `--sync` | | false | A/V sync test pattern: beep + white flash together at each marker (overrides `--audio`) |
+| `--sync-interval` | | 1.0 | Seconds between sync markers |
 
 ## Generating audio
 
@@ -156,7 +162,7 @@ encfixture batch jobs.json [--parallel N] [--fail-fast] [--json]
 
 - `type` and `output` are required. Other fields mirror the corresponding subcommand flags.
 - `--sample-rate` becomes `sampleRate` and `--pix-fmt` becomes `pixFmt` (camelCase) in JSON.
-- Video jobs also accept `codec`, `crf`, `bitrate`, `pixFmt`; image jobs accept `quality`.
+- Video jobs also accept `codec`, `crf`, `bitrate`, `pixFmt`, `sync`, `syncInterval`; image jobs accept `quality`.
 - `defaults` applies to all jobs and can be overridden per job.
 
 ### batch flags
@@ -288,4 +294,16 @@ Verify the encoded codec / pixel format with `ffprobe`:
 
 ```bash
 ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,pix_fmt -of csv=p=0 cov_hevc.mp4
+```
+
+### A/V sync check clip
+
+Generate a clip with a beep + flash every second, then confirm the beep timing
+lines up with the visual flash to detect audio/video drift.
+
+```bash
+encfixture video --sync --tr timecode -d 10 -o sync.mp4
+
+# beep onsets should sit at 0s, 1s, 2s, ... (each lasting ~0.08s)
+ffmpeg -v error -i sync.mp4 -af "silencedetect=noise=-40dB:d=0.03,ametadata=print:file=-" -f null -
 ```

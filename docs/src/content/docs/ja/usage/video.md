@@ -38,6 +38,12 @@ encfixture video --codec prores -d 5 -o prores.mov
 
 # 固定ビットレートとピクセルフォーマットを指定
 encfixture video --codec h264 --bitrate 5M --pix-fmt yuv420p -d 5 -o cbr.mp4
+
+# A/V シンクテストパターン（毎秒ビープ音 + 白フラッシュ）
+encfixture video --sync --tr timecode -d 10 -o sync.mp4
+
+# マーカー間隔を 0.5 秒に指定
+encfixture video --sync --sync-interval 0.5 -d 5 -o sync_fast.mp4
 ```
 
 ## フラグ
@@ -65,6 +71,20 @@ encfixture video --codec h264 --bitrate 5M --pix-fmt yuv420p -d 5 -o cbr.mp4
 | `--crf` | | | CRF 値（h264/hevc/vp9/av1 向け。デフォルト: エンコーダ既定） |
 | `--bitrate` | | | 動画ビットレート（例: `5M`, `800k`。デフォルト: エンコーダ既定） |
 | `--pix-fmt` | | | ピクセルフォーマット（例: `yuv420p`, `yuv422p10le`。デフォルト: コーデック依存） |
+| `--sync` | | false | A/V シンクテストパターン: 各マーカーでビープ音と白フラッシュが同時に発生 |
+| `--sync-interval` | | 1.0 | シンクマーカーの間隔（秒） |
+
+## A/V シンクテストパターン
+
+`--sync` は音ズレ検出用のパターンを生成します。各間隔（`--sync-interval`、既定1秒）の先頭で、画面全体の白フラッシュとビープ音が同時に約0.08秒間発生します。再生時にビープとフラッシュがずれて見えれば、そのファイル（またはそれを生成したパイプライン）に A/V ずれがあります。
+
+- ビープの音程は `--frequency`（既定440Hz）で決まります。
+- `--tr timecode` などのオーバーレイはそのまま描画されるので、どのマーカーでズレたか特定できます。
+- `--sync` は `--audio` より優先されます（ビープ音が選択した音声ソースを置き換えます）。
+
+```bash
+encfixture video --sync --tr timecode -d 10 -o sync.mp4
+```
 
 ## コーデックの選択
 

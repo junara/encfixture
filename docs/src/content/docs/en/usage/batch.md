@@ -53,6 +53,8 @@ Each job requires `type` and `output`. Remaining fields map directly to the flag
 | `crf` | `--crf` | int | video |
 | `bitrate` | `--bitrate` | string | video |
 | `pixFmt` | `--pix-fmt` | string | video |
+| `sync` | `--sync` | bool | video |
+| `syncInterval` | `--sync-interval` | float | video |
 | `quality` | `--quality` | int | image |
 
 ## CLI flags
