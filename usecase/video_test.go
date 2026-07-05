@@ -2,6 +2,7 @@ package usecase_test
 
 import (
 	"errors"
+	"image/color"
 	"strings"
 	"testing"
 
@@ -347,6 +348,108 @@ func TestVideoUseCase_Generate_ProResDefaultPixFmt(t *testing.T) {
 	args := strings.Join(ffmpeg.runArgs, " ")
 	if !strings.Contains(args, "-pix_fmt yuv422p10le") {
 		t.Errorf("expected ProRes default pix_fmt yuv422p10le, got: %s", args)
+	}
+}
+
+func TestVideoUseCase_Generate_SyncUsesFramesAndBeep(t *testing.T) {
+	t.Parallel()
+
+	ffmpeg := &mockFFmpeg{}
+	renderer := newMockRenderer()
+	uc := usecase.NewVideoUseCase(ffmpeg, renderer)
+
+	cfg := domain.VideoConfig{
+		Width:        64,
+		Height:       48,
+		FPS:          30,
+		Duration:     "2",
+		Background:   "solid",
+		Color:        "black",
+		Scale:        4,
+		Output:       "sync.mp4",
+		Audio:        domain.AudioSilence, // overridden by sync
+		SampleRate:   48000,
+		Channels:     2,
+		Frequency:    440,
+		Sync:         true,
+		SyncInterval: 1.0,
+	}
+
+	err := uc.Generate(cfg)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	if !ffmpeg.runWithStdinCalled {
+		t.Fatal("sync mode should render frames (RunWithStdin), not use the simple path")
+	}
+
+	args := strings.Join(ffmpeg.runWithStdinArgs, " ")
+	if !strings.Contains(args, "aevalsrc=exprs=") {
+		t.Errorf("expected aevalsrc beep source, got: %s", args)
+	}
+
+	// Sync overrides --audio silence: no anullsrc.
+	if strings.Contains(args, "anullsrc") {
+		t.Errorf("sync should override silence audio, got: %s", args)
+	}
+
+	// Stereo → one beep expression per channel joined by '|'.
+	if got := strings.Count(args, "sin(2*PI"); got != 2 {
+		t.Errorf("expected 2 channel expressions, got %d in: %s", got, args)
+	}
+}
+
+func TestVideoUseCase_Generate_SyncFlashFrames(t *testing.T) {
+	t.Parallel()
+
+	ffmpeg := &mockFFmpeg{}
+	renderer := newMockRenderer()
+	uc := usecase.NewVideoUseCase(ffmpeg, renderer)
+
+	cfg := domain.VideoConfig{
+		Width:        8,
+		Height:       8,
+		FPS:          30,
+		Duration:     "2",
+		Background:   "solid",
+		Color:        "black",
+		Scale:        4,
+		Output:       "sync.mp4",
+		Audio:        domain.AudioSilence,
+		SampleRate:   48000,
+		Channels:     2,
+		Frequency:    440,
+		Sync:         true,
+		SyncInterval: 1.0,
+	}
+
+	err := uc.Generate(cfg)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	// 2s * 30fps = 60 frames; flash window = first int(0.08*30)=2 frames of each
+	// 30-frame interval.
+	if len(renderer.solidImageColors) != 60 {
+		t.Fatalf("rendered %d frames, want 60", len(renderer.solidImageColors))
+	}
+
+	assertFrameColor(t, "frame 0 (flash)", renderer.solidImageColors[0], color.White)
+	assertFrameColor(t, "frame 1 (flash)", renderer.solidImageColors[1], color.White)
+	assertFrameColor(t, "frame 2 (normal)", renderer.solidImageColors[2], color.Black)
+	assertFrameColor(t, "frame 15 (normal)", renderer.solidImageColors[15], color.Black)
+	assertFrameColor(t, "frame 30 (flash)", renderer.solidImageColors[30], color.White)
+}
+
+func assertFrameColor(t *testing.T, label string, got, want color.Color) {
+	t.Helper()
+
+	gotR, gotG, gotB, _ := got.RGBA()
+	wantR, wantG, wantB, _ := want.RGBA()
+
+	if gotR != wantR || gotG != wantG || gotB != wantB {
+		t.Errorf("%s: color = (%d,%d,%d), want (%d,%d,%d)", label, gotR, gotG, gotB, wantR, wantG, wantB)
 	}
 }
 

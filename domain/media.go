@@ -149,23 +149,25 @@ type ImageConfig struct {
 
 // VideoConfig holds the configuration for video generation.
 type VideoConfig struct {
-	Width      int
-	Height     int
-	FPS        int
-	Duration   string
-	Background string // "solid" or "test"
-	Color      string
-	Overlay    Overlay
-	Scale      int
-	Output     string
-	Audio      AudioType
-	SampleRate int
-	Channels   int
-	Frequency  float64
-	Codec      VideoCodec // empty means container default
-	CRF        string     // constant rate factor; empty means encoder default
-	Bitrate    string     // video bitrate (e.g. "5M"); empty means encoder default
-	PixFmt     string     // pixel format (e.g. "yuv420p"); empty means codec-dependent default
+	Width        int
+	Height       int
+	FPS          int
+	Duration     string
+	Background   string // "solid" or "test"
+	Color        string
+	Overlay      Overlay
+	Scale        int
+	Output       string
+	Audio        AudioType
+	SampleRate   int
+	Channels     int
+	Frequency    float64
+	Codec        VideoCodec // empty means container default
+	CRF          string     // constant rate factor; empty means encoder default
+	Bitrate      string     // video bitrate (e.g. "5M"); empty means encoder default
+	PixFmt       string     // pixel format (e.g. "yuv420p"); empty means codec-dependent default
+	Sync         bool       // generate an A/V sync test pattern (periodic beep + visual flash)
+	SyncInterval float64    // seconds between sync markers; <=0 means the default
 }
 
 // AudioConfig holds the configuration for audio generation.

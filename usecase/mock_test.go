@@ -49,6 +49,7 @@ func (m *mockFFmpeg) RunWithStdin(stdin io.Reader, args ...string) error {
 
 type mockRenderer struct {
 	solidImageCalled      bool
+	solidImageColors      []color.Color
 	drawTextAtCalls       []drawTextAtCall
 	drawTestPatternCalled bool
 	writeImageCalled      bool
@@ -72,8 +73,9 @@ func newMockRenderer() *mockRenderer {
 	}
 }
 
-func (m *mockRenderer) SolidImage(width, height int, _ color.Color) *image.RGBA {
+func (m *mockRenderer) SolidImage(width, height int, clr color.Color) *image.RGBA {
 	m.solidImageCalled = true
+	m.solidImageColors = append(m.solidImageColors, clr)
 
 	return image.NewRGBA(image.Rect(0, 0, width, height))
 }

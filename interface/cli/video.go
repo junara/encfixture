@@ -25,7 +25,10 @@ var videoCmd = &cobra.Command{
   encfixture video -b test --tl frame --tr timecode --bl filename --br "CLIP-001" --center "SAMPLE" -d 10 -o full.mp4
 
   # With sine wave audio
-  encfixture video -a sine --frequency 1000 --center "BEEP" -d 3 -o beep.mp4`,
+  encfixture video -a sine --frequency 1000 --center "BEEP" -d 3 -o beep.mp4
+
+  # A/V sync test pattern (beep + flash every second)
+  encfixture video --sync --tr timecode -d 10 -o sync.mp4`,
 	RunE: runVideo,
 }
 
@@ -53,6 +56,8 @@ func init() {
 	videoCmd.Flags().Int("crf", -1, "Constant rate factor for h264/hevc/vp9/av1 (-1: encoder default)")
 	videoCmd.Flags().String("bitrate", "", "Video bitrate, e.g. 5M or 800k (default: encoder default)")
 	videoCmd.Flags().String("pix-fmt", "", "Pixel format, e.g. yuv420p, yuv422p10le (default: codec-dependent)")
+	videoCmd.Flags().Bool("sync", false, "Generate an A/V sync test pattern (periodic beep + visual flash)")
+	videoCmd.Flags().Float64("sync-interval", 1.0, "Seconds between A/V sync markers (with --sync)")
 }
 
 func runVideo(cmd *cobra.Command, _ []string) error {
@@ -77,6 +82,8 @@ func runVideo(cmd *cobra.Command, _ []string) error {
 	crf, _ := cmd.Flags().GetInt("crf")
 	bitrate, _ := cmd.Flags().GetString("bitrate")
 	pixFmt, _ := cmd.Flags().GetString("pix-fmt")
+	sync, _ := cmd.Flags().GetBool("sync")
+	syncInterval, _ := cmd.Flags().GetFloat64("sync-interval")
 
 	crfValue := ""
 	if crf >= 0 {
@@ -97,16 +104,18 @@ func runVideo(cmd *cobra.Command, _ []string) error {
 			BottomLeft:  bl,
 			BottomRight: br,
 		},
-		Scale:      scale,
-		Output:     output,
-		Audio:      domain.AudioType(audio),
-		SampleRate: sampleRate,
-		Channels:   channels,
-		Frequency:  frequency,
-		Codec:      domain.VideoCodec(codec),
-		CRF:        crfValue,
-		Bitrate:    bitrate,
-		PixFmt:     pixFmt,
+		Scale:        scale,
+		Output:       output,
+		Audio:        domain.AudioType(audio),
+		SampleRate:   sampleRate,
+		Channels:     channels,
+		Frequency:    frequency,
+		Codec:        domain.VideoCodec(codec),
+		CRF:          crfValue,
+		Bitrate:      bitrate,
+		PixFmt:       pixFmt,
+		Sync:         sync,
+		SyncInterval: syncInterval,
 	}
 
 	ffmpeg := infrastructure.NewFFmpeg()

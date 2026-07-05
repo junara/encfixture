@@ -20,6 +20,13 @@ const (
 	secondsPerMinute = 60
 	// proResPixelFormat is the default pixel format for ProRes output (prores_ks).
 	proResPixelFormat = "yuv422p10le"
+	// syncFlashSeconds is the duration of each A/V sync marker: the beep and the
+	// visual flash both last this long, starting together so drift is visible.
+	syncFlashSeconds = 0.08
+	// defaultSyncInterval is the fallback gap between sync markers, in seconds.
+	defaultSyncInterval = 1.0
+	// syncBeepAmplitude keeps the beep below full scale to avoid clipping.
+	syncBeepAmplitude = "0.5"
 )
 
 // ErrUnknownVideoCodec indicates an unrecognized video codec was specified.
@@ -110,11 +117,34 @@ func (uc *VideoUseCase) Generate(cfg domain.VideoConfig) error {
 
 	ext := strings.ToLower(filepath.Ext(cfg.Output))
 
-	if cfg.Background == domain.BackgroundTest || cfg.Overlay.HasContent() {
+	if cfg.Background == domain.BackgroundTest || cfg.Overlay.HasContent() || cfg.Sync {
 		return uc.generateWithFrames(cfg, ext)
 	}
 
 	return uc.generateSimple(cfg, ext)
+}
+
+// syncInterval returns the configured marker gap, falling back to the default
+// when the value is unset or non-positive.
+func syncInterval(cfg domain.VideoConfig) float64 {
+	if cfg.SyncInterval > 0 {
+		return cfg.SyncInterval
+	}
+
+	return defaultSyncInterval
+}
+
+// isSyncFlashFrame reports whether the given frame falls inside a sync marker's
+// flash window (the first syncFlashSeconds of each interval).
+func isSyncFlashFrame(cfg domain.VideoConfig, frameIdx int) bool {
+	intervalFrames := int(syncInterval(cfg) * float64(cfg.FPS))
+	if intervalFrames <= 0 {
+		return false
+	}
+
+	flashFrames := max(int(syncFlashSeconds*float64(cfg.FPS)), 1)
+
+	return frameIdx%intervalFrames < flashFrames
 }
 
 func (uc *VideoUseCase) generateSimple(cfg domain.VideoConfig, ext string) error {
@@ -230,21 +260,33 @@ func (uc *VideoUseCase) renderFrame(
 	frameIdx int,
 	bgColor, textColor color.Color,
 ) *image.RGBA {
-	img := uc.renderer.SolidImage(cfg.Width, cfg.Height, bgColor)
+	frameBg, frameText := bgColor, textColor
 
-	if cfg.Background == domain.BackgroundTest {
+	flash := cfg.Sync && isSyncFlashFrame(cfg, frameIdx)
+	if flash {
+		frameBg = color.White
+		frameText = uc.renderer.ContrastColor(frameBg)
+	}
+
+	img := uc.renderer.SolidImage(cfg.Width, cfg.Height, frameBg)
+
+	if cfg.Background == domain.BackgroundTest && !flash {
 		uc.renderer.DrawTestPattern(img)
 	}
 
 	for _, entry := range cfg.Overlay.Entries() {
 		text := resolveOverlayContent(entry.Content, frameIdx, cfg.FPS, cfg.Output)
-		uc.renderer.DrawScaledTextAt(img, text, textColor, cfg.Scale, entry.Position)
+		uc.renderer.DrawScaledTextAt(img, text, frameText, cfg.Scale, entry.Position)
 	}
 
 	return img
 }
 
 func (uc *VideoUseCase) buildAudioFilter(cfg domain.VideoConfig) string {
+	if cfg.Sync {
+		return buildSyncAudioFilter(cfg)
+	}
+
 	layout := channelLayout(cfg.Channels)
 
 	switch cfg.Audio {
@@ -259,6 +301,29 @@ func (uc *VideoUseCase) buildAudioFilter(cfg domain.VideoConfig) string {
 	default:
 		return fmt.Sprintf("anullsrc=r=%d:cl=%s:d=%s", cfg.SampleRate, layout, cfg.Duration)
 	}
+}
+
+// buildSyncAudioFilter builds a lavfi source that emits a short beep at the
+// start of every interval, matching the visual flash produced by renderFrame.
+// The comma inside the mod()/lt() calls is escaped so the filtergraph parser
+// keeps it as a function argument rather than a filter separator.
+func buildSyncAudioFilter(cfg domain.VideoConfig) string {
+	expr := fmt.Sprintf(
+		"%s*sin(2*PI*%.0f*t)*lt(mod(t\\,%g)\\,%g)",
+		syncBeepAmplitude, cfg.Frequency, syncInterval(cfg), syncFlashSeconds,
+	)
+
+	channels := max(cfg.Channels, 1)
+	perChannel := make([]string, channels)
+
+	for i := range perChannel {
+		perChannel[i] = expr
+	}
+
+	return fmt.Sprintf(
+		"aevalsrc=exprs=%s:s=%d:c=%s:d=%s",
+		strings.Join(perChannel, "|"), cfg.SampleRate, channelLayout(cfg.Channels), cfg.Duration,
+	)
 }
 
 func writeRawRGBA(writer io.Writer, img *image.RGBA) error {
