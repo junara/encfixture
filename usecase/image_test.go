@@ -146,6 +146,75 @@ func TestImageUseCase_Generate_AllOverlays(t *testing.T) {
 	}
 }
 
+func TestImageUseCase_Generate_Backgrounds(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		background string
+		wantGrad   int
+		wantBox    int
+	}{
+		{domain.BackgroundGradient, 1, 0},
+		{domain.BackgroundMoving, 0, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.background, func(t *testing.T) {
+			t.Parallel()
+
+			renderer := newMockRenderer()
+			uc := usecase.NewImageUseCase(renderer)
+
+			cfg := domain.ImageConfig{
+				Width:      64,
+				Height:     48,
+				Background: tt.background,
+				Color:      "black",
+				Output:     "test.png",
+				Scale:      4,
+			}
+
+			err := uc.Generate(cfg)
+			if err != nil {
+				t.Fatalf("Generate() error = %v", err)
+			}
+
+			if renderer.drawGradientCalls != tt.wantGrad {
+				t.Errorf("DrawScrollingGradient called %d times, want %d", renderer.drawGradientCalls, tt.wantGrad)
+			}
+
+			if renderer.drawMovingBoxCalls != tt.wantBox {
+				t.Errorf("DrawMovingBox called %d times, want %d", renderer.drawMovingBoxCalls, tt.wantBox)
+			}
+		})
+	}
+}
+
+func TestImageUseCase_Generate_UnknownBackground(t *testing.T) {
+	t.Parallel()
+
+	renderer := newMockRenderer()
+	uc := usecase.NewImageUseCase(renderer)
+
+	cfg := domain.ImageConfig{
+		Width:      64,
+		Height:     48,
+		Background: "sparkles",
+		Color:      "black",
+		Output:     "test.png",
+		Scale:      4,
+	}
+
+	err := uc.Generate(cfg)
+	if !errors.Is(err, usecase.ErrUnknownBackground) {
+		t.Fatalf("Generate() error = %v, want ErrUnknownBackground", err)
+	}
+
+	if renderer.writeImageCalled {
+		t.Error("WriteImage should not be called for an unknown background")
+	}
+}
+
 func TestImageUseCase_Generate_WriteImageError(t *testing.T) {
 	t.Parallel()
 

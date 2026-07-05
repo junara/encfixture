@@ -39,7 +39,7 @@ func init() {
 	videoCmd.Flags().IntP("height", "H", 1080, "Video height in pixels")
 	videoCmd.Flags().IntP("fps", "r", 30, "Frames per second")
 	videoCmd.Flags().StringP("duration", "d", "10", "Duration in seconds")
-	videoCmd.Flags().StringP("bg", "b", "solid", "Background type: solid, test")
+	videoCmd.Flags().StringP("bg", "b", "solid", "Background type: solid, test, gradient, moving")
 	videoCmd.Flags().StringP("color", "c", "black", "Background color (name or #hex)")
 	videoCmd.Flags().String("tl", "", "Top-left content (frame, timecode, filename, or text)")
 	videoCmd.Flags().String("tr", "", "Top-right content (frame, timecode, filename, or text)")

@@ -33,7 +33,7 @@ func init() {
 
 	imageCmd.Flags().IntP("width", "W", 1920, "Image width in pixels")
 	imageCmd.Flags().IntP("height", "H", 1080, "Image height in pixels")
-	imageCmd.Flags().StringP("bg", "b", "solid", "Background type: solid, test")
+	imageCmd.Flags().StringP("bg", "b", "solid", "Background type: solid, test, gradient, moving")
 	imageCmd.Flags().StringP("color", "c", "black", "Background color (name or #hex)")
 	imageCmd.Flags().String("tl", "", "Top-left content (frame, timecode, filename, or text)")
 	imageCmd.Flags().String("tr", "", "Top-right content (frame, timecode, filename, or text)")

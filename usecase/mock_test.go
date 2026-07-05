@@ -52,6 +52,8 @@ type mockRenderer struct {
 	solidImageColors      []color.Color
 	drawTextAtCalls       []drawTextAtCall
 	drawTestPatternCalled bool
+	drawGradientCalls     int
+	drawMovingBoxCalls    int
 	writeImageCalled      bool
 	writeImagePath        string
 	writeImageQuality     int
@@ -88,6 +90,14 @@ func (m *mockRenderer) DrawScaledTextAt(_ *image.RGBA, text string, _ color.Colo
 
 func (m *mockRenderer) DrawTestPattern(_ *image.RGBA) {
 	m.drawTestPatternCalled = true
+}
+
+func (m *mockRenderer) DrawScrollingGradient(_ *image.RGBA, _, _ int) {
+	m.drawGradientCalls++
+}
+
+func (m *mockRenderer) DrawMovingBox(_ *image.RGBA, _, _ int) {
+	m.drawMovingBoxCalls++
 }
 
 func (m *mockRenderer) WriteImage(path string, _ *image.RGBA, quality int) error {

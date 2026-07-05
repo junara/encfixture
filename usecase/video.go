@@ -33,6 +33,23 @@ const (
 // ErrUnknownVideoCodec indicates an unrecognized video codec was specified.
 var ErrUnknownVideoCodec = errors.New("unknown video codec")
 
+// ErrUnknownBackground indicates an unrecognized background type was specified.
+var ErrUnknownBackground = errors.New("unknown background type")
+
+// drawBackground renders the configured background pattern onto img. Solid
+// backgrounds need no pattern (the image is already filled). frameIdx and fps
+// drive the animated patterns; images pass frameIdx 0.
+func drawBackground(renderer Renderer, img *image.RGBA, background string, frameIdx, fps int) {
+	switch background {
+	case domain.BackgroundTest:
+		renderer.DrawTestPattern(img)
+	case domain.BackgroundGradient:
+		renderer.DrawScrollingGradient(img, frameIdx, fps)
+	case domain.BackgroundMoving:
+		renderer.DrawMovingBox(img, frameIdx, fps)
+	}
+}
+
 func encoderName(codec domain.VideoCodec) (string, error) {
 	switch codec {
 	case domain.CodecH264:
@@ -116,9 +133,13 @@ func (uc *VideoUseCase) Generate(cfg domain.VideoConfig) error {
 		return fmt.Errorf("ffmpeg availability check failed: %w", err)
 	}
 
+	if !domain.IsValidBackground(cfg.Background) {
+		return fmt.Errorf("%w: %s (supported: solid, test, gradient, moving)", ErrUnknownBackground, cfg.Background)
+	}
+
 	ext := strings.ToLower(filepath.Ext(cfg.Output))
 
-	if cfg.Background == domain.BackgroundTest || cfg.Overlay.HasContent() || cfg.Sync {
+	if cfg.Background != domain.BackgroundSolid || cfg.Overlay.HasContent() || cfg.Sync {
 		return uc.generateWithFrames(cfg, ext)
 	}
 
@@ -296,8 +317,8 @@ func (uc *VideoUseCase) renderFrame(
 
 	img := uc.renderer.SolidImage(cfg.Width, cfg.Height, frameBg)
 
-	if cfg.Background == domain.BackgroundTest && !flash {
-		uc.renderer.DrawTestPattern(img)
+	if !flash {
+		drawBackground(uc.renderer, img, cfg.Background, frameIdx, cfg.FPS)
 	}
 
 	for _, entry := range cfg.Overlay.Entries() {

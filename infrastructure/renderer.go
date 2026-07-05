@@ -27,6 +27,11 @@ const (
 	maxColorComponentF = 65535.0
 	defaultJPEGQuality = 90
 	maxJPEGQuality     = 100
+	maxByteValue       = 255
+	gradientPxPerFrame = 6 // horizontal scroll speed of the gradient background
+	movingBoxDivisor   = 8 // moving box is 1/movingBoxDivisor of the frame
+	movingBoxHSweepSec = 2 // seconds for one horizontal sweep of the moving box
+	movingBoxVSweepSec = 3 // seconds for one vertical sweep of the moving box
 )
 
 // ErrUnsupportedImageFormat indicates the output extension maps to no known image encoder.
@@ -215,6 +220,79 @@ func (r *ImageRenderer) DrawTestPattern(img *image.RGBA) {
 			}
 		}
 	}
+}
+
+// DrawScrollingGradient fills the image with a diagonal color gradient that
+// shifts horizontally with frameIdx, giving codecs smooth moving content to
+// compress. The pattern depends only on frameIdx, so output is deterministic.
+func (r *ImageRenderer) DrawScrollingGradient(img *image.RGBA, frameIdx, _ int) {
+	bounds := img.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+
+	if width <= 0 || height <= 0 {
+		return
+	}
+
+	offset := frameIdx * gradientPxPerFrame
+
+	for yPos := range height {
+		for xPos := range width {
+			ramp := ((xPos + yPos + offset) % width) * maxByteValue / width
+			img.Set(xPos, yPos, color.RGBA{
+				R: toByte(ramp),
+				G: toByte(maxByteValue - ramp),
+				B: toByte(ramp),
+				A: maxByteValue,
+			})
+		}
+	}
+}
+
+// toByte narrows a value already known to be within [0, maxByteValue] to uint8.
+func toByte(value int) uint8 {
+	return uint8(value & maxByteValue)
+}
+
+// DrawMovingBox draws a white box that ping-pongs across the frame, giving
+// codecs a hard-edged element to track. Position depends only on frameIdx and
+// fps, so output is deterministic and its speed is independent of frame rate.
+func (r *ImageRenderer) DrawMovingBox(img *image.RGBA, frameIdx, fps int) {
+	bounds := img.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+
+	if width <= 0 || height <= 0 {
+		return
+	}
+
+	boxW := max(width/movingBoxDivisor, 1)
+	boxH := max(height/movingBoxDivisor, 1)
+	xPos0 := pingPong(frameIdx, max(fps*movingBoxHSweepSec, 1), width-boxW)
+	yPos0 := pingPong(frameIdx, max(fps*movingBoxVSweepSec, 1), height-boxH)
+
+	for yPos := yPos0; yPos < yPos0+boxH && yPos < height; yPos++ {
+		for xPos := xPos0; xPos < xPos0+boxW && xPos < width; xPos++ {
+			img.Set(xPos, yPos, color.RGBA{R: maxByteValue, G: maxByteValue, B: maxByteValue, A: maxByteValue})
+		}
+	}
+}
+
+// pingPong maps a frame index to a position in [0, span] that travels from 0 to
+// span over period frames and back, producing continuous reflecting motion.
+func pingPong(frame, period, span int) int {
+	if period <= 0 || span <= 0 {
+		return 0
+	}
+
+	cycle := 2 * period
+	pos := frame % cycle
+
+	if pos < period {
+		return span * pos / period
+	}
+
+	return span * (cycle - pos) / period
 }
 
 // WriteImage writes an RGBA image to a file, selecting the encoder from the

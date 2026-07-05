@@ -20,8 +20,23 @@ const (
 	KeywordFilename = "filename"
 )
 
-// BackgroundTest is the background type for color bar test patterns.
-const BackgroundTest = "test"
+// Background type constants define the available background patterns.
+const (
+	BackgroundSolid    = "solid"    // flat fill of the chosen color
+	BackgroundTest     = "test"     // SMPTE-style color bars
+	BackgroundGradient = "gradient" // horizontally scrolling color gradient
+	BackgroundMoving   = "moving"   // a box translating across the frame
+)
+
+// IsValidBackground reports whether s is a supported background type.
+func IsValidBackground(s string) bool {
+	switch s {
+	case BackgroundSolid, BackgroundTest, BackgroundGradient, BackgroundMoving:
+		return true
+	default:
+		return false
+	}
+}
 
 // VideoCodec represents the video encoder selection.
 // An empty value means the container's default codec is used.

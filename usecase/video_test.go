@@ -574,6 +574,93 @@ func assertFrameColor(t *testing.T, label string, got, want color.Color) {
 	}
 }
 
+func TestVideoUseCase_Generate_MovingBackgrounds(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		background string
+		wantGrad   int
+		wantBox    int
+	}{
+		{domain.BackgroundGradient, 30, 0},
+		{domain.BackgroundMoving, 0, 30},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.background, func(t *testing.T) {
+			t.Parallel()
+
+			ffmpeg := &mockFFmpeg{}
+			renderer := newMockRenderer()
+			uc := usecase.NewVideoUseCase(ffmpeg, renderer)
+
+			cfg := domain.VideoConfig{
+				Width:      64,
+				Height:     48,
+				FPS:        30,
+				Duration:   "1",
+				Background: tt.background,
+				Color:      "black",
+				Scale:      4,
+				Output:     "test.mp4",
+				Audio:      domain.AudioSilence,
+				SampleRate: 48000,
+				Channels:   2,
+			}
+
+			err := uc.Generate(cfg)
+			if err != nil {
+				t.Fatalf("Generate() error = %v", err)
+			}
+
+			// Non-solid backgrounds render frames rather than using the lavfi path.
+			if !ffmpeg.runWithStdinCalled {
+				t.Error("expected frame rendering (RunWithStdin) for animated background")
+			}
+
+			// 1s * 30fps = 30 frames, each drawing the pattern once.
+			if renderer.drawGradientCalls != tt.wantGrad {
+				t.Errorf("DrawScrollingGradient called %d times, want %d", renderer.drawGradientCalls, tt.wantGrad)
+			}
+
+			if renderer.drawMovingBoxCalls != tt.wantBox {
+				t.Errorf("DrawMovingBox called %d times, want %d", renderer.drawMovingBoxCalls, tt.wantBox)
+			}
+		})
+	}
+}
+
+func TestVideoUseCase_Generate_UnknownBackground(t *testing.T) {
+	t.Parallel()
+
+	ffmpeg := &mockFFmpeg{}
+	renderer := newMockRenderer()
+	uc := usecase.NewVideoUseCase(ffmpeg, renderer)
+
+	cfg := domain.VideoConfig{
+		Width:      64,
+		Height:     48,
+		FPS:        30,
+		Duration:   "1",
+		Background: "sparkles",
+		Color:      "black",
+		Scale:      4,
+		Output:     "test.mp4",
+		Audio:      domain.AudioSilence,
+		SampleRate: 48000,
+		Channels:   2,
+	}
+
+	err := uc.Generate(cfg)
+	if !errors.Is(err, usecase.ErrUnknownBackground) {
+		t.Fatalf("Generate() error = %v, want ErrUnknownBackground", err)
+	}
+
+	if ffmpeg.runCalled || ffmpeg.runWithStdinCalled {
+		t.Error("ffmpeg should not run for an unknown background")
+	}
+}
+
 func TestVideoUseCase_Generate_FFmpegUnavailable(t *testing.T) {
 	t.Parallel()
 

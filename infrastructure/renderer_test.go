@@ -222,6 +222,81 @@ func TestImageRenderer_DrawTestPattern(t *testing.T) {
 	_ = bv
 }
 
+func TestImageRenderer_DrawScrollingGradient_Moves(t *testing.T) {
+	t.Parallel()
+
+	r := infrastructure.NewImageRenderer()
+
+	frame0 := r.SolidImage(64, 16, color.Black)
+	r.DrawScrollingGradient(frame0, 0, 30)
+
+	frame10 := r.SolidImage(64, 16, color.Black)
+	r.DrawScrollingGradient(frame10, 10, 30)
+
+	// The gradient fills the frame (top-left is no longer black) and scrolls, so
+	// the two frames differ.
+	rv, gv, bv, _ := frame0.At(0, 0).RGBA()
+	if rv == 0 && gv == 0 && bv == 0 {
+		t.Error("gradient did not fill the frame")
+	}
+
+	if sameImage(frame0, frame10) {
+		t.Error("gradient did not move between frame 0 and frame 10")
+	}
+}
+
+func TestImageRenderer_DrawMovingBox_Moves(t *testing.T) {
+	t.Parallel()
+
+	r := infrastructure.NewImageRenderer()
+	fps := 30
+
+	frame0 := r.SolidImage(80, 80, color.Black)
+	r.DrawMovingBox(frame0, 0, fps)
+
+	// A quarter of the way through the horizontal sweep the box has shifted.
+	frameMid := r.SolidImage(80, 80, color.Black)
+	r.DrawMovingBox(frameMid, fps/2, fps)
+
+	if countWhite(frame0) == 0 {
+		t.Fatal("moving box drew no white pixels")
+	}
+
+	if sameImage(frame0, frameMid) {
+		t.Error("box did not move between frame 0 and mid-sweep")
+	}
+}
+
+func sameImage(a, b *image.RGBA) bool {
+	if a.Bounds() != b.Bounds() {
+		return false
+	}
+
+	for i := range a.Pix {
+		if a.Pix[i] != b.Pix[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func countWhite(img *image.RGBA) int {
+	count := 0
+	bounds := img.Bounds()
+
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			rv, gv, bv, _ := img.At(x, y).RGBA()
+			if rv == 0xffff && gv == 0xffff && bv == 0xffff {
+				count++
+			}
+		}
+	}
+
+	return count
+}
+
 func TestImageRenderer_DrawScaledTextAt(t *testing.T) {
 	t.Parallel()
 

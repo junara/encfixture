@@ -8,6 +8,10 @@ import (
 	"github.com/junara/encfixture/domain"
 )
 
+// imageFPS is the nominal frame rate used when rendering a single still image,
+// so animated background patterns resolve to their frame-zero state.
+const imageFPS = 1
+
 // ImageUseCase handles image file generation.
 type ImageUseCase struct {
 	renderer Renderer
@@ -20,16 +24,18 @@ func NewImageUseCase(renderer Renderer) *ImageUseCase {
 
 // Generate creates an image file based on the provided configuration.
 func (uc *ImageUseCase) Generate(cfg domain.ImageConfig) error {
+	if !domain.IsValidBackground(cfg.Background) {
+		return fmt.Errorf("%w: %s (supported: solid, test, gradient, moving)", ErrUnknownBackground, cfg.Background)
+	}
+
 	bgColor := uc.renderer.ParseColor(cfg.Color)
 	textColor := uc.renderer.ContrastColor(bgColor)
 	img := uc.renderer.SolidImage(cfg.Width, cfg.Height, bgColor)
 
-	if cfg.Background == domain.BackgroundTest {
-		uc.renderer.DrawTestPattern(img)
-	}
+	drawBackground(uc.renderer, img, cfg.Background, 0, imageFPS)
 
 	for _, entry := range cfg.Overlay.Entries() {
-		text := resolveOverlayContent(entry.Content, 0, 1, cfg.Output)
+		text := resolveOverlayContent(entry.Content, 0, imageFPS, cfg.Output)
 		uc.renderer.DrawScaledTextAt(img, text, textColor, cfg.Scale, entry.Position)
 	}
 

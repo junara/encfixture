@@ -22,6 +22,8 @@ type Renderer interface {
 	DrawScaledText(img *image.RGBA, text string, col color.Color, scale int)
 	DrawScaledTextAt(img *image.RGBA, text string, col color.Color, scale int, pos domain.TextPosition)
 	DrawTestPattern(img *image.RGBA)
+	DrawScrollingGradient(img *image.RGBA, frameIdx, fps int)
+	DrawMovingBox(img *image.RGBA, frameIdx, fps int)
 	WriteImage(path string, img *image.RGBA, quality int) error
 	ParseColor(name string) color.Color
 	ContrastColor(bg color.Color) color.Color
