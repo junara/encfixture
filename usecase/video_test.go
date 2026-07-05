@@ -442,6 +442,127 @@ func TestVideoUseCase_Generate_SyncFlashFrames(t *testing.T) {
 	assertFrameColor(t, "frame 30 (flash)", renderer.solidImageColors[30], color.White)
 }
 
+func TestVideoUseCase_Generate_SyncCustomInterval(t *testing.T) {
+	t.Parallel()
+
+	ffmpeg := &mockFFmpeg{}
+	renderer := newMockRenderer()
+	uc := usecase.NewVideoUseCase(ffmpeg, renderer)
+
+	cfg := domain.VideoConfig{
+		Width:        8,
+		Height:       8,
+		FPS:          30,
+		Duration:     "1",
+		Background:   "solid",
+		Color:        "black",
+		Scale:        4,
+		Output:       "sync.mp4",
+		Audio:        domain.AudioSilence,
+		SampleRate:   48000,
+		Channels:     2,
+		Frequency:    440,
+		Sync:         true,
+		SyncInterval: 0.5,
+	}
+
+	err := uc.Generate(cfg)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	args := strings.Join(ffmpeg.runWithStdinArgs, " ")
+	if !strings.Contains(args, `mod(t\,0.5)`) {
+		t.Errorf("expected 0.5s interval in beep filter, got: %s", args)
+	}
+
+	// 30fps, 0.5s interval → flash every 15 frames.
+	assertFrameColor(t, "frame 0 (flash)", renderer.solidImageColors[0], color.White)
+	assertFrameColor(t, "frame 15 (flash)", renderer.solidImageColors[15], color.White)
+	assertFrameColor(t, "frame 7 (normal)", renderer.solidImageColors[7], color.Black)
+}
+
+func TestVideoUseCase_Generate_SyncQuantizedAlignment(t *testing.T) {
+	t.Parallel()
+
+	ffmpeg := &mockFFmpeg{}
+	renderer := newMockRenderer()
+	uc := usecase.NewVideoUseCase(ffmpeg, renderer)
+
+	// interval*fps is not an integer (0.33*30 = 9.9 → 9 frames). The audio beep
+	// must use the same frame-quantized 9/30 = 0.3s period as the video flash,
+	// otherwise the two drift apart over the clip.
+	cfg := domain.VideoConfig{
+		Width:        8,
+		Height:       8,
+		FPS:          30,
+		Duration:     "1",
+		Background:   "solid",
+		Color:        "black",
+		Scale:        4,
+		Output:       "sync.mp4",
+		Audio:        domain.AudioSilence,
+		SampleRate:   48000,
+		Channels:     2,
+		Frequency:    440,
+		Sync:         true,
+		SyncInterval: 0.33,
+	}
+
+	err := uc.Generate(cfg)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	args := strings.Join(ffmpeg.runWithStdinArgs, " ")
+	if !strings.Contains(args, `mod(t\,0.3)`) {
+		t.Errorf("audio beep must use the frame-quantized 0.3s period, got: %s", args)
+	}
+
+	// Flash starts on frame 9 (=0.3s), not on frame 8.
+	assertFrameColor(t, "frame 8 (normal)", renderer.solidImageColors[8], color.Black)
+	assertFrameColor(t, "frame 9 (flash)", renderer.solidImageColors[9], color.White)
+}
+
+func TestVideoUseCase_Generate_SyncMono(t *testing.T) {
+	t.Parallel()
+
+	ffmpeg := &mockFFmpeg{}
+	renderer := newMockRenderer()
+	uc := usecase.NewVideoUseCase(ffmpeg, renderer)
+
+	cfg := domain.VideoConfig{
+		Width:        8,
+		Height:       8,
+		FPS:          30,
+		Duration:     "1",
+		Background:   "solid",
+		Color:        "black",
+		Scale:        4,
+		Output:       "sync.mp4",
+		Audio:        domain.AudioSilence,
+		SampleRate:   48000,
+		Channels:     1,
+		Frequency:    440,
+		Sync:         true,
+		SyncInterval: 1.0,
+	}
+
+	err := uc.Generate(cfg)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	args := strings.Join(ffmpeg.runWithStdinArgs, " ")
+	if got := strings.Count(args, "sin(2*PI"); got != 1 {
+		t.Errorf("mono should emit 1 channel expression, got %d in: %s", got, args)
+	}
+
+	if !strings.Contains(args, "c=mono") {
+		t.Errorf("expected c=mono layout, got: %s", args)
+	}
+}
+
 func assertFrameColor(t *testing.T, label string, got, want color.Color) {
 	t.Helper()
 

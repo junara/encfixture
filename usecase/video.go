@@ -20,8 +20,9 @@ const (
 	secondsPerMinute = 60
 	// proResPixelFormat is the default pixel format for ProRes output (prores_ks).
 	proResPixelFormat = "yuv422p10le"
-	// syncFlashSeconds is the duration of each A/V sync marker: the beep and the
-	// visual flash both last this long, starting together so drift is visible.
+	// syncFlashSeconds is the nominal duration of each A/V sync marker. It is
+	// quantized to whole frames so the beep and the visual flash cover exactly
+	// the same span, starting together so drift is visible.
 	syncFlashSeconds = 0.08
 	// defaultSyncInterval is the fallback gap between sync markers, in seconds.
 	defaultSyncInterval = 1.0
@@ -134,17 +135,42 @@ func syncInterval(cfg domain.VideoConfig) float64 {
 	return defaultSyncInterval
 }
 
+// syncFrameWindow returns the marker period and flash length in frames. The
+// visual flash and the audio beep are both derived from these frame counts, so
+// they stay aligned even when interval*fps is not a whole number. Each is at
+// least one frame, since a marker cannot be shorter than a single frame.
+func syncFrameWindow(cfg domain.VideoConfig) (int, int) {
+	fps := float64(cfg.FPS)
+	intervalFrames := max(int(syncInterval(cfg)*fps), 1)
+	flashFrames := max(int(syncFlashSeconds*fps), 1)
+
+	return intervalFrames, flashFrames
+}
+
 // isSyncFlashFrame reports whether the given frame falls inside a sync marker's
-// flash window (the first syncFlashSeconds of each interval).
+// flash window (the first flashFrames of each interval).
 func isSyncFlashFrame(cfg domain.VideoConfig, frameIdx int) bool {
-	intervalFrames := int(syncInterval(cfg) * float64(cfg.FPS))
-	if intervalFrames <= 0 {
+	if cfg.FPS <= 0 {
 		return false
 	}
 
-	flashFrames := max(int(syncFlashSeconds*float64(cfg.FPS)), 1)
+	intervalFrames, flashFrames := syncFrameWindow(cfg)
 
 	return frameIdx%intervalFrames < flashFrames
+}
+
+// syncAudioWindow returns the beep period and length in seconds, matching the
+// frame-quantized video flash so audio and video stay aligned. It falls back to
+// the raw seconds when FPS is unusable (no frames are produced in that case).
+func syncAudioWindow(cfg domain.VideoConfig) (float64, float64) {
+	if cfg.FPS <= 0 {
+		return syncInterval(cfg), syncFlashSeconds
+	}
+
+	intervalFrames, flashFrames := syncFrameWindow(cfg)
+	fps := float64(cfg.FPS)
+
+	return float64(intervalFrames) / fps, float64(flashFrames) / fps
 }
 
 func (uc *VideoUseCase) generateSimple(cfg domain.VideoConfig, ext string) error {
@@ -308,9 +334,11 @@ func (uc *VideoUseCase) buildAudioFilter(cfg domain.VideoConfig) string {
 // The comma inside the mod()/lt() calls is escaped so the filtergraph parser
 // keeps it as a function argument rather than a filter separator.
 func buildSyncAudioFilter(cfg domain.VideoConfig) string {
+	intervalSec, flashSec := syncAudioWindow(cfg)
+
 	expr := fmt.Sprintf(
 		"%s*sin(2*PI*%.0f*t)*lt(mod(t\\,%g)\\,%g)",
-		syncBeepAmplitude, cfg.Frequency, syncInterval(cfg), syncFlashSeconds,
+		syncBeepAmplitude, cfg.Frequency, intervalSec, flashSec,
 	)
 
 	channels := max(cfg.Channels, 1)
