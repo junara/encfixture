@@ -23,7 +23,7 @@ archives:
         formats:
           - zip
 
-brews:
+homebrew_casks:
   - repository:
       owner: junara
       name: homebrew-tap
@@ -31,8 +31,17 @@ brews:
     homepage: "https://github.com/junara/encfixture"
     description: "Generate dummy media files for ffmpeg encoding tests"
     license: "MIT"
+    url:
+      verified: "github.com/junara/encfixture/"
     dependencies:
-      - name: ffmpeg
+      - formula: ffmpeg
+    # バイナリは署名・公証していないため、Gatekeeper の隔離属性を外す
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/encfixture"]
+          end
 
 checksum:
   name_template: "checksums.txt"
