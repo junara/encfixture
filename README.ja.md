@@ -232,7 +232,36 @@ encfixture audio --json -t sine -d 3 -o beep.wav
 | `--output` | `-o` | output.wav | 出力ファイルパス（ffmpeg 対応の任意フォーマット） |
 | `--no-clobber` | | | 既存の出力ファイルがある場合は上書きせずエラーにする |
 
-### verify（検査）
+### doctor（環境診断）
+
+生成の前に環境を診断します。ffmpeg / ffprobe の有無と、選択可能なエンコーダのうちローカルの ffmpeg ビルドが対応しているものを一覧します。ffmpeg か ffprobe が無い場合は非ゼロで終了します（エンコーダの欠落は報告のみで、失敗にはなりません）。
+
+```bash
+encfixture doctor
+encfixture doctor --json
+```
+
+```
+$ encfixture doctor
+ffmpeg:  OK 7.1 (/opt/homebrew/bin/ffmpeg)
+ffprobe: OK 7.1 (/opt/homebrew/bin/ffprobe)
+video encoders:
+  h264     libx264      OK
+  hevc     libx265      OK
+  vp9      libvpx-vp9   OK
+  av1      libaom-av1   MISSING
+  prores   prores_ks    OK
+audio encoders:
+  aac      aac          OK
+  opus     libopus      OK
+```
+
+```bash
+$ encfixture doctor --json
+{"status":"ok","ffmpeg":{"name":"ffmpeg","available":true,"version":"7.1","path":"/opt/homebrew/bin/ffmpeg"},"ffprobe":{...},"videoEncoders":[{"codec":"h264","encoder":"libx264","available":true},...],"audioEncoders":[{"codec":"aac","encoder":"aac","available":true},...]}
+```
+
+### verify（検査・アサーション）
 
 既存のメディアファイルのコンテナ・各ストリーム情報を ffprobe 経由で検査します。生成したファイル（や任意のファイル）が期待どおりのコーデック・解像度・fps・尺かを確認でき、CI でも使えます。
 
@@ -252,6 +281,34 @@ Duration: 2.000000s
 Size:     28934 bytes
 Stream 0: video  h264  1920x1080  30fps  yuv420p
 Stream 1: audio  aac  48000Hz  2ch
+```
+
+#### アサーション（`--expect`）
+
+`--expect key=value` を 1 つ以上渡すと、verify がワンショットの合否判定になります。各期待値を検査結果と突き合わせ、不一致を一覧し、1 つでも失敗すれば非ゼロで終了します。
+
+```bash
+# 生成してからアサート
+encfixture video --codec h264 -d 5 -o test.mp4
+encfixture verify test.mp4 --expect codec=h264 --expect width=1920 --expect duration=5
+```
+
+```
+$ encfixture verify test.mp4 --expect codec=hevc --expect duration=5
+File:     test.mp4
+...
+FAIL  codec: expected hevc, actual h264
+PASS  duration = 5.016000
+encfixture: verification failed: 1 of 2 expectations failed
+```
+
+対応キー: `codec`, `width`, `height`, `fps`, `pixFmt`, `duration`, `audioCodec`, `sampleRate`, `channels`（キーは大文字小文字を区別せず、`pix-fmt` などのケバブケース別名も可）。数値キーは `5+-0.2`（または `5±0.2`）の許容誤差サフィックスを受け付けます。`duration` はデフォルトで ±0.1 秒、`fps` は ±0.001 の許容誤差があり、`fps=29.97` は ffprobe の `29.970` にマッチします。
+
+`--json` では結果に `checks` 配列と `ok` / `failed` の `status` が付きます:
+
+```bash
+$ encfixture verify --json test.mp4 --expect codec=hevc
+{"status":"failed","file":"test.mp4","format":{...},"streams":[...],"checks":[{"field":"codec","expected":"hevc","actual":"h264","pass":false}]}
 ```
 
 ### バッチ処理
@@ -318,6 +375,30 @@ $ encfixture video --json --tl frame --tr timecode -d 5 -o test.mp4
 $ encfixture batch --json jobs.json
 {"results":[{"index":0,"type":"image","file":"a.png","status":"ok"}],"succeeded":1,"failed":0}
 ```
+
+エラーは機械可読の `code` と、可能な場合は復旧のための `hint` を持つ構造化エラーとして出力されます。スクリプトや AI エージェントがメッセージを解析せずに失敗の種類で分岐できます:
+
+```bash
+$ encfixture video --json --codec av1 -o test.mp4
+{"status":"error","code":"encoder_not_available","error":"...Unknown encoder 'libaom-av1'","hint":"Run 'encfixture doctor' to list the encoders your ffmpeg build supports, then pick an available --codec."}
+```
+
+| code | 意味 |
+|---|---|
+| `usage` | フラグ・引数の誤り |
+| `ffmpeg_not_found` / `ffprobe_not_found` | ツールが PATH に無い |
+| `encoder_not_available` | 要求したエンコーダがこの ffmpeg ビルドに無い |
+| `unknown_codec` / `unknown_background` | `--codec` / `--bg` の値が不正 |
+| `invalid_duration` / `invalid_bitrate` | `-d` / `--bitrate` の値が不正 |
+| `invalid_expectation` | `--expect` の書式が不正 |
+| `verify_failed` | `--expect` のアサーションが失敗 |
+| `output_exists` | `--no-clobber` 下で上書きを拒否 |
+| `probe_failed` | ffprobe がファイルを読めない |
+| `ffmpeg_failed` | ffmpeg が分類外のエラーで終了 |
+| `env_unhealthy` | `doctor` が ffmpeg/ffprobe の欠落を検出 |
+| `error` | その他 |
+
+`--json` なしの場合も、同じ hint が stderr に `hint:` 行として出力されます。
 
 ## 対応色
 

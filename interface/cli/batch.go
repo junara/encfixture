@@ -137,7 +137,7 @@ func emitBatchJSON(results []domain.JobResult, succeeded, failed int) {
 		errStr := ""
 
 		if r.Err != nil {
-			status = "error"
+			status = statusError
 			errStr = r.Err.Error()
 		}
 

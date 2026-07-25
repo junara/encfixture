@@ -2,7 +2,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -82,12 +81,12 @@ func exactArgsWithHelpHint(n int) cobra.PositionalArgs {
 // Execute runs the root command.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		writeJSONError(err)
+		code, hint := classifyError(err)
+		writeJSONError(err, code, hint)
 		fmt.Fprintf(os.Stderr, "encfixture: %v\n", err)
 
-		var uErr *usageError
-		if errors.As(err, &uErr) {
-			fmt.Fprintf(os.Stderr, "Run '%s --help' for usage.\n", uErr.path)
+		if hint != "" {
+			fmt.Fprintf(os.Stderr, "hint: %s\n", hint)
 		}
 
 		os.Exit(1)

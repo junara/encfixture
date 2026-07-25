@@ -54,17 +54,36 @@ $ encfixture audio --json -t sine -d 3 -o beep.wav
 
 ### Errors
 
-When a command fails, `--json` emits an error object to stdout (the human-readable message still goes to stderr) and the exit code is non-zero.
+When a command fails, `--json` emits a structured error object to stdout (the human-readable message still goes to stderr) and the exit code is non-zero. The `code` is stable and machine-readable — branch on it instead of parsing the message.
 
 ```bash
-$ encfixture verify --json missing.mp4
-{"status":"error","error":"verify failed: probe failed: ..."}
+$ encfixture video --json --codec av1 -o test.mp4
+{"status":"error","code":"encoder_not_available","error":"...Unknown encoder 'libaom-av1'","hint":"Run 'encfixture doctor' to list the encoders your ffmpeg build supports, then pick an available --codec."}
 ```
 
 | Field | Type | Description |
 |---|---|---|
 | `status` | string | Always `"error"` |
+| `code` | string | Stable machine-readable error code (below) |
 | `error` | string | Error message |
+| `hint` | string | How to recover (omitted when there is nothing useful to say) |
+
+| Code | Meaning |
+|---|---|
+| `usage` | Wrong flags or arguments |
+| `ffmpeg_not_found` / `ffprobe_not_found` | Tool missing from PATH |
+| `encoder_not_available` | Requested encoder not in this ffmpeg build |
+| `unknown_codec` / `unknown_background` | Invalid `--codec` / `--bg` value |
+| `invalid_duration` / `invalid_bitrate` | Malformed `-d` / `--bitrate` value |
+| `invalid_expectation` | Malformed `--expect` assertion |
+| `verify_failed` | One or more `--expect` assertions failed |
+| `output_exists` | Refused to overwrite under `--no-clobber` |
+| `probe_failed` | ffprobe could not read the file |
+| `ffmpeg_failed` | ffmpeg exited with an unclassified error |
+| `env_unhealthy` | `doctor` found ffmpeg/ffprobe missing |
+| `error` | Anything else |
+
+Without `--json`, the same hint is printed to stderr as a `hint:` line after the error message.
 
 ### batch
 

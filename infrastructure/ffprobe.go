@@ -16,6 +16,10 @@ import (
 // ErrFFprobeNotFound indicates ffprobe is not installed or not in PATH.
 var ErrFFprobeNotFound = errors.New("ffprobe not found in PATH: please install ffmpeg")
 
+// ErrFFprobeFailed indicates an ffprobe invocation exited with an error, e.g.
+// because the file is missing or not a media file.
+var ErrFFprobeFailed = errors.New("ffprobe execution failed")
+
 // FFprobe inspects media files by shelling out to ffprobe.
 type FFprobe struct{}
 
@@ -47,7 +51,7 @@ func (f *FFprobe) Probe(path string) (domain.MediaInfo, error) {
 
 	out, err := cmd.Output()
 	if err != nil {
-		return empty, fmt.Errorf("ffprobe execution failed: %w: %s", err, strings.TrimSpace(stderr.String()))
+		return empty, fmt.Errorf("%w: %w: %s", ErrFFprobeFailed, err, strings.TrimSpace(stderr.String()))
 	}
 
 	var parsed ffprobeOutput

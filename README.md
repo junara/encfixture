@@ -220,7 +220,36 @@ encfixture audio --json -t sine -d 3 -o beep.wav
 | `--output` | `-o` | output.wav | Output file path (any format supported by ffmpeg) |
 | `--no-clobber` | | | Fail if the output file already exists instead of overwriting |
 
-### Verify (inspect)
+### Doctor (environment check)
+
+Check the environment before generating anything: whether ffmpeg and ffprobe are installed, and which of the selectable encoders the local ffmpeg build supports. Exits non-zero when ffmpeg or ffprobe is missing; missing encoders are reported but not fatal.
+
+```bash
+encfixture doctor
+encfixture doctor --json
+```
+
+```
+$ encfixture doctor
+ffmpeg:  OK 7.1 (/opt/homebrew/bin/ffmpeg)
+ffprobe: OK 7.1 (/opt/homebrew/bin/ffprobe)
+video encoders:
+  h264     libx264      OK
+  hevc     libx265      OK
+  vp9      libvpx-vp9   OK
+  av1      libaom-av1   MISSING
+  prores   prores_ks    OK
+audio encoders:
+  aac      aac          OK
+  opus     libopus      OK
+```
+
+```bash
+$ encfixture doctor --json
+{"status":"ok","ffmpeg":{"name":"ffmpeg","available":true,"version":"7.1","path":"/opt/homebrew/bin/ffmpeg"},"ffprobe":{...},"videoEncoders":[{"codec":"h264","encoder":"libx264","available":true},...],"audioEncoders":[{"codec":"aac","encoder":"aac","available":true},...]}
+```
+
+### Verify (inspect / assert)
 
 Inspect an existing media file's container and per-stream properties via ffprobe. Useful for confirming that a generated file (or any file) has the codec, resolution, fps, and duration you expect — including in CI.
 
@@ -244,7 +273,35 @@ Stream 1: audio  aac  48000Hz  2ch
 
 ```bash
 $ encfixture verify --json test.mp4
-{"file":"test.mp4","format":{"formatName":"mov,mp4,...","duration":"2.000000","size":"28934","bitRate":"115736"},"streams":[{"index":0,"type":"video","codec":"h264","width":1920,"height":1080,"fps":"30","pixFmt":"yuv420p"},{"index":1,"type":"audio","codec":"aac","sampleRate":"48000","channels":2}]}
+{"status":"ok","file":"test.mp4","format":{"formatName":"mov,mp4,...","duration":"2.000000","size":"28934","bitRate":"115736"},"streams":[{"index":0,"type":"video","codec":"h264","width":1920,"height":1080,"fps":"30","pixFmt":"yuv420p"},{"index":1,"type":"audio","codec":"aac","sampleRate":"48000","channels":2}]}
+```
+
+#### Assertions (`--expect`)
+
+Pass one or more `--expect key=value` assertions to turn verify into a one-shot pass/fail gate: each expectation is checked against the probed properties, failures are listed, and the command exits non-zero if any fail.
+
+```bash
+# Generate, then assert in one command each
+encfixture video --codec h264 -d 5 -o test.mp4
+encfixture verify test.mp4 --expect codec=h264 --expect width=1920 --expect duration=5
+```
+
+```
+$ encfixture verify test.mp4 --expect codec=hevc --expect duration=5
+File:     test.mp4
+...
+FAIL  codec: expected hevc, actual h264
+PASS  duration = 5.016000
+encfixture: verification failed: 1 of 2 expectations failed
+```
+
+Supported keys: `codec`, `width`, `height`, `fps`, `pixFmt`, `duration`, `audioCodec`, `sampleRate`, `channels` (keys are case-insensitive; kebab-case aliases like `pix-fmt` also work). Numeric keys accept a tolerance suffix written `5+-0.2` (or `5±0.2`); `duration` defaults to a ±0.1s tolerance and `fps` to ±0.001, so `fps=29.97` matches ffprobe's `29.970`.
+
+With `--json`, the result gains a `checks` array and a `status` of `ok` or `failed`:
+
+```bash
+$ encfixture verify --json test.mp4 --expect codec=hevc
+{"status":"failed","file":"test.mp4","format":{...},"streams":[...],"checks":[{"field":"codec","expected":"hevc","actual":"h264","pass":false}]}
 ```
 
 ### Batch Processing
@@ -311,6 +368,30 @@ $ encfixture video --json --tl frame --tr timecode -d 5 -o test.mp4
 $ encfixture batch --json jobs.json
 {"results":[{"index":0,"type":"image","file":"a.png","status":"ok"}],"succeeded":1,"failed":0}
 ```
+
+Failures are reported as structured errors with a stable machine-readable `code` and, where possible, a recovery `hint` — so scripts and AI agents can branch on the failure without parsing the message:
+
+```bash
+$ encfixture video --json --codec av1 -o test.mp4
+{"status":"error","code":"encoder_not_available","error":"...Unknown encoder 'libaom-av1'","hint":"Run 'encfixture doctor' to list the encoders your ffmpeg build supports, then pick an available --codec."}
+```
+
+| Code | Meaning |
+|---|---|
+| `usage` | Wrong flags or arguments |
+| `ffmpeg_not_found` / `ffprobe_not_found` | Tool missing from PATH |
+| `encoder_not_available` | Requested encoder not in this ffmpeg build |
+| `unknown_codec` / `unknown_background` | Invalid `--codec` / `--bg` value |
+| `invalid_duration` / `invalid_bitrate` | Malformed `-d` / `--bitrate` value |
+| `invalid_expectation` | Malformed `--expect` assertion |
+| `verify_failed` | One or more `--expect` assertions failed |
+| `output_exists` | Refused to overwrite under `--no-clobber` |
+| `probe_failed` | ffprobe could not read the file |
+| `ffmpeg_failed` | ffmpeg exited with an unclassified error |
+| `env_unhealthy` | `doctor` found ffmpeg/ffprobe missing |
+| `error` | Anything else |
+
+Without `--json`, the same hint is printed to stderr as a `hint:` line after the error.
 
 ## Supported Colors
 

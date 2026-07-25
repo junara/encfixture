@@ -34,6 +34,7 @@ export default defineConfig({
 						{ label: 'オーバーレイ', slug: 'usage/overlay', translations: { en: 'Overlay' } },
 						{ label: 'バッチ処理', slug: 'usage/batch', translations: { en: 'Batch' } },
 						{ label: '検査（verify）', slug: 'usage/verify', translations: { en: 'Verify' } },
+						{ label: '環境診断（doctor）', slug: 'usage/doctor', translations: { en: 'Doctor' } },
 					],
 				},
 				{

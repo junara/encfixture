@@ -1,6 +1,6 @@
 ---
 name: encfixture
-description: Guide to using `encfixture`, a CLI that generates dummy media files (image / video / audio) for ffmpeg encoding tests. Covers subcommands image / video / audio / batch / verify, overlay placement, background patterns (solid / test bars / scrolling gradient / moving box), video codec selection (h264 / hevc / vp9 / av1 / prores) with CRF / bitrate / pixel format, PNG / JPEG image output, A/V sync test patterns (periodic beep + visual flash), inspecting files with ffprobe, and JSON output.
+description: Guide to using `encfixture`, a CLI that generates dummy media files (image / video / audio) for ffmpeg encoding tests. Covers subcommands image / video / audio / batch / verify / doctor, overlay placement, background patterns (solid / test bars / scrolling gradient / moving box), video codec selection (h264 / hevc / vp9 / av1 / prores) with CRF / bitrate / pixel format, PNG / JPEG image output, A/V sync test patterns (periodic beep + visual flash), inspecting and asserting files with verify --expect, environment / encoder diagnosis with doctor, and JSON output with structured error codes.
 ---
 
 # encfixture — dummy media file generation skill
@@ -19,10 +19,37 @@ encfixture image [flags]          # generate image
 encfixture video [flags]          # generate video
 encfixture audio [flags]          # generate audio
 encfixture batch <file.json>      # run multiple jobs defined in JSON
-encfixture verify <file>          # inspect an existing file via ffprobe
+encfixture verify <file>          # inspect a file via ffprobe, optionally asserting --expect key=value
+encfixture doctor                 # check ffmpeg/ffprobe availability and encoder support
 ```
 
-Common to all commands: pass `--json` to print a structured result to stdout (errors too, as `{"status":"error","error":"..."}`), and `--verbose` to stream ffmpeg's log and encoding progress to stderr.
+Common to all commands: pass `--json` to print a structured result to stdout (errors too — see "Structured errors" below), and `--verbose` to stream ffmpeg's log and encoding progress to stderr.
+
+## Checking the environment first
+
+Run `doctor` before generating when the environment is unknown — it reports whether ffmpeg/ffprobe are installed and which `--codec` values will actually work on this machine (e.g. Homebrew ffmpeg often lacks `libaom-av1`):
+
+```bash
+encfixture doctor --json
+```
+
+```json
+{
+  "status": "ok",
+  "ffmpeg": { "name": "ffmpeg", "available": true, "version": "7.1", "path": "/opt/homebrew/bin/ffmpeg" },
+  "ffprobe": { "name": "ffprobe", "available": true, "version": "7.1", "path": "/opt/homebrew/bin/ffprobe" },
+  "videoEncoders": [
+    { "codec": "h264", "encoder": "libx264", "available": true },
+    { "codec": "av1", "encoder": "libaom-av1", "available": false }
+  ],
+  "audioEncoders": [
+    { "codec": "aac", "encoder": "aac", "available": true },
+    { "codec": "opus", "encoder": "libopus", "available": true }
+  ]
+}
+```
+
+Exit code is non-zero only when ffmpeg or ffprobe is missing (`"status": "error"`); unavailable encoders are informational — avoid those `--codec` values.
 
 ## Generating images
 
@@ -161,6 +188,7 @@ encfixture verify --json out.mp4     # machine-readable
 
 ```json
 {
+  "status": "ok",
   "file": "out.mp4",
   "format": { "formatName": "mov,mp4,...", "duration": "2.000000", "size": "28934", "bitRate": "115736" },
   "streams": [
@@ -172,6 +200,36 @@ encfixture verify --json out.mp4     # machine-readable
 
 Requires `ffprobe` (ships with ffmpeg). Missing/unreadable files exit non-zero
 with ffprobe's error message.
+
+### Asserting expectations (`--expect`)
+
+Turn verify into a one-shot pass/fail gate — prefer this over reading the JSON
+and comparing yourself. Each `--expect key=value` is checked against the probed
+properties; the command exits non-zero if any fail.
+
+```bash
+encfixture verify out.mp4 --expect codec=h264 --expect width=1920 --expect duration=5
+encfixture verify --json out.mp4 --expect codec=h264 --expect audioCodec=aac
+```
+
+- Supported keys: `codec`, `width`, `height`, `fps`, `pixFmt`, `duration`,
+  `audioCodec`, `sampleRate`, `channels`. Keys are case-insensitive and
+  kebab-case aliases (`pix-fmt`, `audio-codec`, `sample-rate`) also work.
+- `codec`/`width`/`height`/`fps`/`pixFmt` check the first video stream;
+  `audioCodec`/`sampleRate`/`channels` the first audio stream; `duration` the
+  container. A missing stream fails the check with e.g. `"(no video stream)"`.
+- Numeric keys accept a tolerance suffix: `duration=5+-0.2` (or `5±0.2`).
+  Defaults: `duration` ±0.1s (container rounding), `fps` ±0.001 (so
+  `fps=29.97` matches ffprobe's `29.970`), all other keys exact.
+
+With `--json`, the output gains `"status": "ok" | "failed"` and a `checks` array:
+
+```json
+{ "status": "failed", "file": "out.mp4", "format": {}, "streams": [],
+  "checks": [ { "field": "codec", "expected": "hevc", "actual": "h264", "pass": false } ] }
+```
+
+On failure the process exits 1 with error code `verify_failed`.
 
 ## Batch processing
 
@@ -267,12 +325,32 @@ $ encfixture video --json --tl frame -d 5 -o test.mp4
 {"status":"ok","file":"test.mp4","type":"video","width":1920,"height":1080,"fps":30,"duration":"5"}
 ```
 
-On failure, `--json` emits an error object to stdout and exits non-zero:
+### Structured errors
+
+On failure, `--json` emits an error object to stdout and exits non-zero. The
+`code` is stable and machine-readable — branch on it instead of parsing the
+message; `hint` says how to recover:
 
 ```bash
-$ encfixture verify --json missing.mp4
-{"status":"error","error":"verify failed: probe failed: ..."}
+$ encfixture video --json --codec av1 -o test.mp4
+{"status":"error","code":"encoder_not_available","error":"...Unknown encoder 'libaom-av1'","hint":"Run 'encfixture doctor' to list the encoders your ffmpeg build supports, then pick an available --codec."}
 ```
+
+| `code` | meaning | typical recovery |
+|---|---|---|
+| `usage` | wrong flags/args | fix the command line |
+| `ffmpeg_not_found` / `ffprobe_not_found` | tool missing from PATH | install ffmpeg |
+| `encoder_not_available` | encoder not in this ffmpeg build | run `doctor`, pick an available `--codec` |
+| `unknown_codec` / `unknown_background` | invalid `--codec` / `--bg` | use a listed value |
+| `invalid_duration` / `invalid_bitrate` / `invalid_expectation` | malformed value | fix the value |
+| `verify_failed` | `--expect` assertions failed | inspect `checks` in the output |
+| `output_exists` | refused overwrite under `--no-clobber` | remove file or drop the flag |
+| `probe_failed` | ffprobe could not read the file | check path / file integrity |
+| `ffmpeg_failed` | unclassified ffmpeg error | re-run with `--verbose` |
+| `env_unhealthy` | `doctor` found ffmpeg/ffprobe missing | install ffmpeg |
+| `error` | anything else | read `error` |
+
+Without `--json`, the same hint is printed to stderr as a `hint:` line.
 
 ## Common recipes
 
@@ -328,13 +406,16 @@ Generate one clip per codec to test a decoder / pipeline against multiple encode
 ```
 
 ```bash
+# Check encoder availability first (e.g. Homebrew ffmpeg often lacks libaom-av1)
+encfixture doctor --json
+
 encfixture batch codecs.json --json
 ```
 
-Verify the encoded codec / pixel format with `ffprobe`:
+Then assert each output got the codec / pixel format you asked for:
 
 ```bash
-ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,pix_fmt -of csv=p=0 cov_hevc.mp4
+encfixture verify cov_hevc.mp4 --expect codec=hevc --expect pixFmt=yuv420p --expect "duration=5+-0.2"
 ```
 
 ### A/V sync check clip

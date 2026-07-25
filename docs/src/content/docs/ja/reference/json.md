@@ -54,17 +54,36 @@ $ encfixture audio --json -t sine -d 3 -o beep.wav
 
 ### エラー
 
-コマンドが失敗した場合、`--json` 指定時はエラーオブジェクトを標準出力に出力します（人間向けメッセージは従来どおり標準エラー出力）。終了コードは非ゼロです。
+コマンドが失敗した場合、`--json` 指定時は構造化されたエラーオブジェクトを標準出力に出力します（人間向けメッセージは従来どおり標準エラー出力）。終了コードは非ゼロです。`code` は安定した機械可読の値なので、メッセージを解析せずに `code` で分岐してください。
 
 ```bash
-$ encfixture verify --json missing.mp4
-{"status":"error","error":"verify failed: probe failed: ..."}
+$ encfixture video --json --codec av1 -o test.mp4
+{"status":"error","code":"encoder_not_available","error":"...Unknown encoder 'libaom-av1'","hint":"Run 'encfixture doctor' to list the encoders your ffmpeg build supports, then pick an available --codec."}
 ```
 
 | フィールド | 型 | 説明 |
 |---|---|---|
 | `status` | string | 常に `"error"` |
+| `code` | string | 安定した機械可読のエラーコード（下表） |
 | `error` | string | エラーメッセージ |
+| `hint` | string | 復旧方法（有用な情報が無い場合は省略） |
+
+| code | 意味 |
+|---|---|
+| `usage` | フラグ・引数の誤り |
+| `ffmpeg_not_found` / `ffprobe_not_found` | ツールが PATH に無い |
+| `encoder_not_available` | 要求したエンコーダがこの ffmpeg ビルドに無い |
+| `unknown_codec` / `unknown_background` | `--codec` / `--bg` の値が不正 |
+| `invalid_duration` / `invalid_bitrate` | `-d` / `--bitrate` の値が不正 |
+| `invalid_expectation` | `--expect` の書式が不正 |
+| `verify_failed` | `--expect` のアサーションが失敗 |
+| `output_exists` | `--no-clobber` 下で上書きを拒否 |
+| `probe_failed` | ffprobe がファイルを読めない |
+| `ffmpeg_failed` | ffmpeg が分類外のエラーで終了 |
+| `env_unhealthy` | `doctor` が ffmpeg/ffprobe の欠落を検出 |
+| `error` | その他 |
+
+`--json` なしの場合も、同じ hint がエラーメッセージの後に `hint:` 行として標準エラー出力に表示されます。
 
 ### batch
 

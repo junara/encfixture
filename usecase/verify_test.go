@@ -83,3 +83,51 @@ func TestVerifyUseCase_Verify_ProbeError(t *testing.T) {
 		t.Fatal("Verify() should propagate a probe error")
 	}
 }
+
+func TestVerifyUseCase_VerifyWithExpectations(t *testing.T) {
+	t.Parallel()
+
+	prober := &mockProber{
+		info: domain.MediaInfo{
+			Format: domain.FormatInfo{FormatName: "mp4", Duration: "5.0"},
+			Streams: []domain.StreamInfo{
+				{Index: 0, Type: domain.StreamTypeVideo, Codec: "h264", Width: 1920, Height: 1080},
+			},
+		},
+	}
+	uc := usecase.NewVerifyUseCase(prober)
+
+	exps := []domain.Expectation{
+		{Field: "codec", Value: "h264"},
+		{Field: "width", Value: "1280"},
+	}
+
+	_, checks, err := uc.VerifyWithExpectations("test.mp4", exps)
+	if err != nil {
+		t.Fatalf("VerifyWithExpectations() error = %v", err)
+	}
+
+	if len(checks) != 2 {
+		t.Fatalf("len(checks) = %d, want 2", len(checks))
+	}
+
+	if !checks[0].Pass || checks[1].Pass {
+		t.Errorf("checks = %+v, want first pass and second fail", checks)
+	}
+}
+
+func TestVerifyUseCase_VerifyWithExpectations_ProbeError(t *testing.T) {
+	t.Parallel()
+
+	prober := &mockProber{probeErr: errors.New("corrupt file")}
+	uc := usecase.NewVerifyUseCase(prober)
+
+	_, checks, err := uc.VerifyWithExpectations("bad.mp4", []domain.Expectation{{Field: "codec", Value: "h264"}})
+	if err == nil {
+		t.Fatal("VerifyWithExpectations() should propagate a probe error")
+	}
+
+	if checks != nil {
+		t.Errorf("checks = %+v, want nil on probe error", checks)
+	}
+}

@@ -14,6 +14,13 @@ import (
 // ErrFFmpegNotFound indicates ffmpeg is not installed or not in PATH.
 var ErrFFmpegNotFound = errors.New("ffmpeg not found in PATH: please install ffmpeg")
 
+// ErrFFmpegFailed indicates an ffmpeg invocation exited with an error.
+var ErrFFmpegFailed = errors.New("ffmpeg execution failed")
+
+// ErrEncoderNotAvailable indicates the requested encoder is not compiled into
+// the local ffmpeg build.
+var ErrEncoderNotAvailable = errors.New("encoder not available in this ffmpeg build")
+
 // FFmpeg provides methods for executing ffmpeg commands.
 type FFmpeg struct {
 	// Verbose streams ffmpeg's own log and encoding progress to stderr
@@ -65,7 +72,7 @@ func (f *FFmpeg) run(stdin io.Reader, args []string) error {
 
 		err := cmd.Run()
 		if err != nil {
-			return fmt.Errorf("ffmpeg execution failed: %w", err)
+			return fmt.Errorf("%w: %w", ErrFFmpegFailed, err)
 		}
 
 		return nil
@@ -73,10 +80,27 @@ func (f *FFmpeg) run(stdin io.Reader, args []string) error {
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, strings.TrimSpace(string(out)))
+		msg := strings.TrimSpace(string(out))
+		fmt.Fprintln(os.Stderr, msg)
 
-		return fmt.Errorf("ffmpeg execution failed: %w", err)
+		if line, found := lineContaining(msg, "Unknown encoder"); found {
+			return fmt.Errorf("%w: %s", ErrEncoderNotAvailable, line)
+		}
+
+		return fmt.Errorf("%w: %w", ErrFFmpegFailed, err)
 	}
 
 	return nil
+}
+
+// lineContaining returns the first line of msg containing substr, so a typed
+// error can carry ffmpeg's own diagnostic without the rest of the log.
+func lineContaining(msg, substr string) (string, bool) {
+	for line := range strings.SplitSeq(msg, "\n") {
+		if strings.Contains(line, substr) {
+			return strings.TrimSpace(line), true
+		}
+	}
+
+	return "", false
 }

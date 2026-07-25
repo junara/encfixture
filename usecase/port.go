@@ -22,6 +22,13 @@ type Prober interface {
 	Probe(path string) (domain.MediaInfo, error)
 }
 
+// Inspector reports the availability of external tools and of the encoders
+// compiled into the local ffmpeg build.
+type Inspector interface {
+	ToolStatus(name string) domain.ToolStatus
+	Encoders() (map[string]bool, error)
+}
+
 // Renderer defines the interface for image rendering operations.
 type Renderer interface {
 	SolidImage(width, height int, c color.Color) *image.RGBA
