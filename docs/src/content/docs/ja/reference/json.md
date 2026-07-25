@@ -21,7 +21,7 @@ encfixture video --json --tl frame --tr timecode -d 5 -o test.mp4
 
 | フィールド | 型 | 説明 |
 |---|---|---|
-| `status` | string | 常に `"ok"` |
+| `status` | string | 成功時は `"ok"`、失敗時は `"error"` |
 | `file` | string | 出力ファイルパス |
 | `type` | string | `"image"`, `"video"`, `"audio"` |
 | `width` | int | 幅（image/video のみ） |
@@ -51,6 +51,20 @@ $ encfixture video --json --tl frame -d 3 -o test.mp4
 $ encfixture audio --json -t sine -d 3 -o beep.wav
 {"status":"ok","file":"beep.wav","type":"audio","duration":"3"}
 ```
+
+### エラー
+
+コマンドが失敗した場合、`--json` 指定時はエラーオブジェクトを標準出力に出力します（人間向けメッセージは従来どおり標準エラー出力）。終了コードは非ゼロです。
+
+```bash
+$ encfixture verify --json missing.mp4
+{"status":"error","error":"verify failed: probe failed: ..."}
+```
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `status` | string | 常に `"error"` |
+| `error` | string | エラーメッセージ |
 
 ### batch
 

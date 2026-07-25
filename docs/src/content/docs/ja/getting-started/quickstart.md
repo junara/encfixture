@@ -57,3 +57,12 @@ encfixture audio -t sine -f 1000 -d 3 -o beep.wav
 ```bash
 encfixture video --tl frame --tr timecode --bl filename --br "CLIP-001" --center "SAMPLE" -d 10 -o full.mp4
 ```
+
+## グローバルフラグ
+
+すべてのコマンドで次のフラグが使えます。
+
+| フラグ | 説明 |
+|---|---|
+| `--json` | 結果（エラーも含む）を JSON で標準出力に出力 |
+| `--verbose` | ffmpeg のログとエンコード進捗を表示 |

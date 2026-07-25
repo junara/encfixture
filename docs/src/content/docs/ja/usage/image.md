@@ -50,6 +50,7 @@ encfixture image -c blue --center "SAMPLE" -q 75 -o sample.jpg
 | `--scale` | `-S` | 4 | テキストの拡大率 |
 | `--output` | `-o` | output.png | 出力ファイルパス（.png, .jpg, .jpeg） |
 | `--quality` | `-q` | 90 | JPEG 品質 1-100（.jpg/.jpeg 出力時） |
+| `--no-clobber` | | | 既存の出力ファイルがある場合は上書きせずエラーにする |
 
 ## 出力フォーマット
 

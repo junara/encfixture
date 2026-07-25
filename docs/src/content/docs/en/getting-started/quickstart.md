@@ -57,3 +57,12 @@ Each position accepts:
 ```bash
 encfixture video --tl frame --tr timecode --bl filename --br "CLIP-001" --center "SAMPLE" -d 10 -o full.mp4
 ```
+
+## Global flags
+
+Every command accepts these flags:
+
+| Flag | Description |
+|---|---|
+| `--json` | Output results (and errors) as JSON to stdout |
+| `--verbose` | Show ffmpeg log output and encoding progress |

@@ -77,6 +77,7 @@ encfixture video --sync --sync-interval 0.5 -d 5 -o sync_fast.mp4
 | `--pix-fmt` | | | ピクセルフォーマット（例: `yuv420p`, `yuv422p10le`。デフォルト: コーデック依存） |
 | `--sync` | | false | A/V シンクテストパターン: 各マーカーでビープ音と白フラッシュが同時に発生 |
 | `--sync-interval` | | 1.0 | シンクマーカーの間隔（秒） |
+| `--no-clobber` | | | 既存の出力ファイルがある場合は上書きせずエラーにする |
 
 ## A/V シンクテストパターン
 

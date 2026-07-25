@@ -21,7 +21,7 @@ Output:
 
 | Field | Type | Description |
 |---|---|---|
-| `status` | string | Always `"ok"` |
+| `status` | string | `"ok"` on success, `"error"` on failure |
 | `file` | string | Output file path |
 | `type` | string | `"image"`, `"video"`, or `"audio"` |
 | `width` | int | Width (image/video only) |
@@ -51,6 +51,20 @@ $ encfixture video --json --tl frame -d 3 -o test.mp4
 $ encfixture audio --json -t sine -d 3 -o beep.wav
 {"status":"ok","file":"beep.wav","type":"audio","duration":"3"}
 ```
+
+### Errors
+
+When a command fails, `--json` emits an error object to stdout (the human-readable message still goes to stderr) and the exit code is non-zero.
+
+```bash
+$ encfixture verify --json missing.mp4
+{"status":"error","error":"verify failed: probe failed: ..."}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `status` | string | Always `"error"` |
+| `error` | string | Error message |
 
 ### batch
 

@@ -50,6 +50,7 @@ encfixture image -c blue --center "SAMPLE" -q 75 -o sample.jpg
 | `--scale` | `-S` | 4 | Text scale factor |
 | `--output` | `-o` | output.png | Output file path (.png, .jpg, .jpeg) |
 | `--quality` | `-q` | 90 | JPEG quality 1-100 (for .jpg/.jpeg output) |
+| `--no-clobber` | | | Fail if the output file already exists instead of overwriting |
 
 ## Output formats
 

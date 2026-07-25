@@ -77,6 +77,7 @@ encfixture video --sync --sync-interval 0.5 -d 5 -o sync_fast.mp4
 | `--pix-fmt` | | | Pixel format, e.g. `yuv420p`, `yuv422p10le` (default: codec-dependent) |
 | `--sync` | | false | A/V sync test pattern: a beep and a white flash fire together at each marker |
 | `--sync-interval` | | 1.0 | Seconds between sync markers |
+| `--no-clobber` | | | Fail if the output file already exists instead of overwriting |
 
 ## A/V sync test pattern
 

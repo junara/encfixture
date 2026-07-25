@@ -41,3 +41,4 @@ encfixture audio -t silence -d 10 -o silence.flac
 | `--channels` | `-C` | 2 | チャンネル数 |
 | `--frequency` | `-f` | 440 | 周波数（Hz） |
 | `--output` | `-o` | output.wav | 出力ファイルパス（ffmpeg 対応の任意フォーマット） |
+| `--no-clobber` | | | 既存の出力ファイルがある場合は上書きせずエラーにする |

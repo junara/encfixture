@@ -22,7 +22,7 @@ encfixture batch <file.json>      # run multiple jobs defined in JSON
 encfixture verify <file>          # inspect an existing file via ffprobe
 ```
 
-Common to all commands: pass `--json` to print a structured result to stdout.
+Common to all commands: pass `--json` to print a structured result to stdout (errors too, as `{"status":"error","error":"..."}`), and `--verbose` to stream ffmpeg's log and encoding progress to stderr.
 
 ## Generating images
 
@@ -63,6 +63,7 @@ encfixture image -c blue -q 75 -o sample.jpg
 | `--scale` | `-S` | 4 | Text scale factor |
 | `--output` | `-o` | output.png | Output path (.png, .jpg, .jpeg) |
 | `--quality` | `-q` | 90 | JPEG quality 1-100 (.jpg/.jpeg only) |
+| `--no-clobber` | | | Fail if the output file already exists instead of overwriting |
 
 ## Generating videos
 
@@ -119,6 +120,7 @@ encfixture video --sync --sync-interval 0.5 -d 5 -o sync_fast.mp4
 | `--pix-fmt` | | | Pixel format, e.g. `yuv420p` (default: codec-dependent; prores uses `yuv422p10le`) |
 | `--sync` | | false | A/V sync test pattern: beep + white flash together at each marker (overrides `--audio`) |
 | `--sync-interval` | | 1.0 | Seconds between sync markers |
+| `--no-clobber` | | | Fail if the output file already exists instead of overwriting |
 
 ## Generating audio
 
@@ -143,6 +145,7 @@ encfixture audio -t noise -d 3 -o noise.mp3
 | `--channels` | `-C` | 2 | Channel count |
 | `--frequency` | `-f` | 440 | Frequency (Hz) |
 | `--output` | `-o` | output.wav | Output path |
+| `--no-clobber` | | | Fail if the output file already exists instead of overwriting |
 
 ## Verifying files
 
@@ -262,6 +265,13 @@ Hex: `#ff6600`, `#333333`, etc.
 ```bash
 $ encfixture video --json --tl frame -d 5 -o test.mp4
 {"status":"ok","file":"test.mp4","type":"video","width":1920,"height":1080,"fps":30,"duration":"5"}
+```
+
+On failure, `--json` emits an error object to stdout and exits non-zero:
+
+```bash
+$ encfixture verify --json missing.mp4
+{"status":"error","error":"verify failed: probe failed: ..."}
 ```
 
 ## Common recipes

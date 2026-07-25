@@ -41,3 +41,4 @@ encfixture audio -t silence -d 10 -o silence.flac
 | `--channels` | `-C` | 2 | Number of channels |
 | `--frequency` | `-f` | 440 | Frequency (Hz) |
 | `--output` | `-o` | output.wav | Output file path (any format supported by ffmpeg) |
+| `--no-clobber` | | | Fail if the output file already exists instead of overwriting |
