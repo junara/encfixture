@@ -34,13 +34,17 @@ func ValidateBitrate(s string) error {
 
 	num := s
 	switch s[len(s)-1] {
-	case 'k', 'K', 'm', 'M':
+	case 'k', 'K', 'M', 'G':
 		num = s[:len(s)-1]
+	case 'm':
+		// ffmpeg parses a lowercase 'm' suffix as milli, which is never what a
+		// bitrate means; catch the likely "5M" typo here.
+		return fmt.Errorf("%w: %q ('m' means milli to ffmpeg; use uppercase 'M' for megabits)", ErrInvalidBitrate, s)
 	}
 
 	v, err := strconv.ParseFloat(num, 64)
 	if err != nil || math.IsNaN(v) || math.IsInf(v, 0) || v <= 0 {
-		return fmt.Errorf("%w: %q (expected a number with an optional k/M suffix, e.g. 800k or 5M)", ErrInvalidBitrate, s)
+		return fmt.Errorf("%w: %q (expected a number with an optional k/M/G suffix, e.g. 800k or 5M)", ErrInvalidBitrate, s)
 	}
 
 	return nil

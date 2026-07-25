@@ -224,7 +224,9 @@ func TestValidateBitrate(t *testing.T) {
 		{name: "suffix only", bitrate: "M", wantErr: true},
 		{name: "zero", bitrate: "0", wantErr: true},
 		{name: "negative", bitrate: "-5M", wantErr: true},
-		{name: "unknown suffix", bitrate: "5G", wantErr: true},
+		{name: "gigabits", bitrate: "1G", wantErr: false},
+		{name: "unknown suffix", bitrate: "5T", wantErr: true},
+		{name: "lowercase m is milli, likely a typo for M", bitrate: "5m", wantErr: true},
 	}
 
 	for _, tt := range tests {
