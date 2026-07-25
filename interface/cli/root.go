@@ -2,6 +2,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -28,16 +29,52 @@ Each position flag (--tl, --tr, --center, --bl, --br) accepts:
 	// Execute prints the error itself; without this cobra would print it too,
 	// showing every failure twice.
 	SilenceErrors: true,
+	// Show usage only for usage errors (bad flags/args, hinted below), not for
+	// runtime failures where it would drown the actual error.
+	SilenceUsage: true,
 }
 
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output results as JSON")
+
+	rootCmd.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
+		return &usageError{err: err, path: cmd.CommandPath()}
+	})
+}
+
+// usageError marks errors caused by wrong flags or arguments, so Execute can
+// point the user at --help without doing that for runtime failures.
+type usageError struct {
+	err  error
+	path string // command path for the --help hint, e.g. "encfixture verify"
+}
+
+func (u *usageError) Error() string { return u.err.Error() }
+
+func (u *usageError) Unwrap() error { return u.err }
+
+// exactArgsWithHelpHint validates like cobra.ExactArgs but marks failures as
+// usage errors, since usage is no longer printed automatically on errors.
+func exactArgsWithHelpHint(n int) cobra.PositionalArgs {
+	return func(cmd *cobra.Command, args []string) error {
+		if err := cobra.ExactArgs(n)(cmd, args); err != nil {
+			return &usageError{err: err, path: cmd.CommandPath()}
+		}
+
+		return nil
+	}
 }
 
 // Execute runs the root command.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "encfixture: %v\n", err)
+
+		var uErr *usageError
+		if errors.As(err, &uErr) {
+			fmt.Fprintf(os.Stderr, "Run '%s --help' for usage.\n", uErr.path)
+		}
+
 		os.Exit(1)
 	}
 }

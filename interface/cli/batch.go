@@ -34,7 +34,7 @@ A top-level "defaults" object applies to every job; individual jobs override it.
 
   # Machine-readable output for CI
   encfixture batch jobs.json --json`,
-	Args: cobra.ExactArgs(1),
+	Args: exactArgsWithHelpHint(1),
 	RunE: runBatch,
 }
 

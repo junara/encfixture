@@ -23,7 +23,7 @@ var verifyCmd = &cobra.Command{
 
   # Machine-readable JSON
   encfixture verify --json test.mp4`,
-	Args: cobra.ExactArgs(1),
+	Args: exactArgsWithHelpHint(1),
 	RunE: runVerify,
 }
 
