@@ -1,6 +1,7 @@
 package domain_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/junara/encfixture/domain"
@@ -169,5 +170,75 @@ func TestOverlay_Entries(t *testing.T) {
 		if entries[i].Content != exp.content {
 			t.Errorf("Entries()[%d].Content = %q, want %q", i, entries[i].Content, exp.content)
 		}
+	}
+}
+
+func TestValidateDuration(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		duration string
+		wantErr  bool
+	}{
+		{name: "integer seconds", duration: "10", wantErr: false},
+		{name: "fractional seconds", duration: "0.5", wantErr: false},
+		{name: "not a number", duration: "abc", wantErr: true},
+		{name: "empty", duration: "", wantErr: true},
+		{name: "zero", duration: "0", wantErr: true},
+		{name: "negative", duration: "-3", wantErr: true},
+		{name: "infinity", duration: "Inf", wantErr: true},
+		{name: "nan", duration: "NaN", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := domain.ValidateDuration(tt.duration)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateDuration(%q) error = %v, wantErr %v", tt.duration, err, tt.wantErr)
+			}
+
+			if err != nil && !errors.Is(err, domain.ErrInvalidDuration) {
+				t.Errorf("ValidateDuration(%q) error = %v, want ErrInvalidDuration", tt.duration, err)
+			}
+		})
+	}
+}
+
+func TestValidateBitrate(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		bitrate string
+		wantErr bool
+	}{
+		{name: "empty means encoder default", bitrate: "", wantErr: false},
+		{name: "kilobits lowercase", bitrate: "800k", wantErr: false},
+		{name: "megabits uppercase", bitrate: "5M", wantErr: false},
+		{name: "plain number", bitrate: "5000000", wantErr: false},
+		{name: "fractional with suffix", bitrate: "1.5M", wantErr: false},
+		{name: "not a number", bitrate: "fast", wantErr: true},
+		{name: "suffix only", bitrate: "M", wantErr: true},
+		{name: "zero", bitrate: "0", wantErr: true},
+		{name: "negative", bitrate: "-5M", wantErr: true},
+		{name: "unknown suffix", bitrate: "5G", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := domain.ValidateBitrate(tt.bitrate)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateBitrate(%q) error = %v, wantErr %v", tt.bitrate, err, tt.wantErr)
+			}
+
+			if err != nil && !errors.Is(err, domain.ErrInvalidBitrate) {
+				t.Errorf("ValidateBitrate(%q) error = %v, want ErrInvalidBitrate", tt.bitrate, err)
+			}
+		})
 	}
 }

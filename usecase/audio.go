@@ -23,6 +23,11 @@ func NewAudioUseCase(ffmpeg FFmpegExecutor) *AudioUseCase {
 
 // Generate creates an audio file based on the provided configuration.
 func (uc *AudioUseCase) Generate(cfg domain.AudioConfig) error {
+	durErr := domain.ValidateDuration(cfg.Duration)
+	if durErr != nil {
+		return fmt.Errorf("%w", durErr)
+	}
+
 	err := uc.ffmpeg.CheckAvailable()
 	if err != nil {
 		return fmt.Errorf("ffmpeg availability check failed: %w", err)

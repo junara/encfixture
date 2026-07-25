@@ -1,6 +1,51 @@
 // Package domain defines the core entities and value objects for media generation.
 package domain
 
+import (
+	"errors"
+	"fmt"
+	"math"
+	"strconv"
+)
+
+// ErrInvalidDuration indicates a duration that is not a positive number of seconds.
+var ErrInvalidDuration = errors.New("invalid duration")
+
+// ErrInvalidBitrate indicates a malformed bitrate value.
+var ErrInvalidBitrate = errors.New("invalid bitrate")
+
+// ValidateDuration checks that s parses as a positive number of seconds, so a
+// typo fails fast with a clear message instead of deep inside ffmpeg.
+func ValidateDuration(s string) error {
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil || math.IsNaN(v) || math.IsInf(v, 0) || v <= 0 {
+		return fmt.Errorf("%w: %q (must be a positive number of seconds)", ErrInvalidDuration, s)
+	}
+
+	return nil
+}
+
+// ValidateBitrate checks that s looks like an ffmpeg bitrate such as "800k" or
+// "5M". An empty value is valid and means the encoder default.
+func ValidateBitrate(s string) error {
+	if s == "" {
+		return nil
+	}
+
+	num := s
+	switch s[len(s)-1] {
+	case 'k', 'K', 'm', 'M':
+		num = s[:len(s)-1]
+	}
+
+	v, err := strconv.ParseFloat(num, 64)
+	if err != nil || math.IsNaN(v) || math.IsInf(v, 0) || v <= 0 {
+		return fmt.Errorf("%w: %q (expected a number with an optional k/M suffix, e.g. 800k or 5M)", ErrInvalidBitrate, s)
+	}
+
+	return nil
+}
+
 // TextPosition represents where text is drawn on the image.
 type TextPosition int
 

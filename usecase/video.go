@@ -136,6 +136,16 @@ func (uc *VideoUseCase) Generate(cfg domain.VideoConfig) error {
 		return fmt.Errorf("%w: %s (supported: solid, test, gradient, moving)", ErrUnknownBackground, cfg.Background)
 	}
 
+	durErr := domain.ValidateDuration(cfg.Duration)
+	if durErr != nil {
+		return fmt.Errorf("%w", durErr)
+	}
+
+	bitrateErr := domain.ValidateBitrate(cfg.Bitrate)
+	if bitrateErr != nil {
+		return fmt.Errorf("%w", bitrateErr)
+	}
+
 	err := uc.ffmpeg.CheckAvailable()
 	if err != nil {
 		return fmt.Errorf("ffmpeg availability check failed: %w", err)
