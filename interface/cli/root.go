@@ -25,6 +25,9 @@ Each position flag (--tl, --tr, --center, --bl, --br) accepts:
   filename  - output filename
   <text>    - any other string is displayed as-is`,
 	Version: Version,
+	// Execute prints the error itself; without this cobra would print it too,
+	// showing every failure twice.
+	SilenceErrors: true,
 }
 
 func init() {
@@ -34,7 +37,7 @@ func init() {
 // Execute runs the root command.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintf(os.Stderr, "encfixture: %v\n", err)
 		os.Exit(1)
 	}
 }
