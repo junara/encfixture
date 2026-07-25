@@ -1,0 +1,20 @@
+{
+  "name": "encfixture",
+  "description": "Generate dummy media files (image / video / audio) for ffmpeg encoding tests: overlays, codecs, A/V sync patterns, batch jobs, verify assertions, and environment diagnosis.",
+  "author": {
+    "name": "junara"
+  },
+  "homepage": "https://junara.github.io/encfixture/",
+  "repository": "https://github.com/junara/encfixture",
+  "license": "MIT",
+  "keywords": [
+    "ffmpeg",
+    "media",
+    "video",
+    "audio",
+    "image",
+    "fixtures",
+    "testing",
+    "encoding"
+  ]
+}

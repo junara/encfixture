@@ -457,6 +457,17 @@ Add the following to your project's `CLAUDE.md` to let Claude Code know about en
 
 encfixture ships an [Agent Skill](https://agentskills.io) (`SKILL.md`) and an [APM](https://microsoft.github.io/apm/) package. Install it into your project so AI coding agents pick up encfixture's flags, overlay keywords, and batch schema without you having to explain them each time.
 
+### Install as a Claude Code plugin
+
+The repository is also a [Claude Code plugin marketplace](https://code.claude.com/docs/en/plugin-marketplaces). Inside Claude Code:
+
+```
+/plugin marketplace add junara/encfixture
+/plugin install encfixture@encfixture
+```
+
+The plugin installs the skill (invoke it with `/encfixture:encfixture`) and tracks the repository's default branch — `/plugin marketplace update encfixture` pulls the latest version.
+
 ### Install with `gh skill` (GitHub CLI)
 
 Works for Claude Code, GitHub Copilot, Cursor, Codex, and Gemini CLI.

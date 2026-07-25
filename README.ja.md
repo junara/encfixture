@@ -464,6 +464,17 @@ Claude が実行:
 
 encfixture は [Agent Skill](https://agentskills.io)（`SKILL.md`）と [APM](https://microsoft.github.io/apm/) パッケージを同梱しています。プロジェクトにインストールしておくと、AI コーディングエージェントが encfixture のフラグ・オーバーレイ予約語・batch スキーマを毎回説明せずに扱えるようになります。
 
+### Claude Code プラグインとしてインストール
+
+このリポジトリは [Claude Code プラグインマーケットプレイス](https://code.claude.com/docs/ja/plugin-marketplaces)としても機能します。Claude Code 内で:
+
+```
+/plugin marketplace add junara/encfixture
+/plugin install encfixture@encfixture
+```
+
+プラグインとしてスキルがインストールされ（`/encfixture:encfixture` で起動）、リポジトリのデフォルトブランチに追従します。`/plugin marketplace update encfixture` で最新版を取得できます。
+
 ### `gh skill` でインストール（GitHub CLI）
 
 Claude Code / GitHub Copilot / Cursor / Codex / Gemini CLI に対応しています。

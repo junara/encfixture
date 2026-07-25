@@ -30,6 +30,23 @@ jobs:
         with:
           version: v2.10.1
 
+  plugin-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      # version 未指定の警告(git SHA 追従を意図した仕様)があるため --strict は使わない
+      - name: Validate plugin marketplace manifest
+        run: claude plugin validate .
+
   goreleaser-check:
     runs-on: ubuntu-latest
     timeout-minutes: 15

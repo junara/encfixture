@@ -13,6 +13,23 @@ encfixture ships an [Agent Skill](https://agentskills.io) (`SKILL.md`) and an [A
   - `generate-video-with-overlay` — one video with frame / timecode / filename overlays, parameters configurable.
   - `generate-batch-spec` — interactively assemble a `fixtures.json` from free-form requirements, then run it.
 
+## Install as a Claude Code plugin
+
+The repository doubles as a [Claude Code plugin marketplace](https://code.claude.com/docs/en/plugin-marketplaces): `.claude-plugin/marketplace.json` lists a single `encfixture` plugin whose root is the repository itself, so the plugin picks up `skills/encfixture/SKILL.md` directly. Inside Claude Code:
+
+```
+/plugin marketplace add junara/encfixture
+/plugin install encfixture@encfixture
+```
+
+The skill is namespaced by the plugin, so you can invoke it explicitly with `/encfixture:encfixture` (agents also load it automatically when relevant). The plugin tracks the repository's default branch; update with:
+
+```
+/plugin marketplace update encfixture
+```
+
+Uninstall with `/plugin uninstall encfixture@encfixture`. If you already installed the skill with `gh skill` or `apm`, pick one method — installing both loads the skill twice.
+
 ## Install with `gh skill` (GitHub CLI)
 
 Works for Claude Code, GitHub Copilot, Cursor, Codex, and Gemini CLI.

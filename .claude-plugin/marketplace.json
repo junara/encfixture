@@ -1,0 +1,21 @@
+{
+  "name": "encfixture",
+  "owner": {
+    "name": "junara"
+  },
+  "description": "Marketplace for the encfixture plugin: a skill that teaches Claude Code how to generate and verify dummy media files for ffmpeg encoding tests.",
+  "plugins": [
+    {
+      "name": "encfixture",
+      "source": "./",
+      "description": "Skill for the encfixture CLI: generate dummy media files (image / video / audio) for ffmpeg encoding tests, run batch jobs, assert file properties with verify --expect, and diagnose the environment with doctor.",
+      "category": "testing",
+      "tags": [
+        "ffmpeg",
+        "media",
+        "fixtures",
+        "testing"
+      ]
+    }
+  ]
+}

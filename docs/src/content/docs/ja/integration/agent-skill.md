@@ -13,6 +13,23 @@ encfixture は [Agent Skill](https://agentskills.io)（`SKILL.md`）と [APM](ht
   - `generate-video-with-overlay` — frame / timecode / filename オーバーレイ付きの動画 1 本を生成（パラメータ可変）。
   - `generate-batch-spec` — 自然言語の要件から `fixtures.json` を組み立てて実行。
 
+## Claude Code プラグインとしてインストール
+
+このリポジトリは [Claude Code プラグインマーケットプレイス](https://code.claude.com/docs/ja/plugin-marketplaces)としても機能します。`.claude-plugin/marketplace.json` がリポジトリ自身をルートとする単一の `encfixture` プラグインを定義しており、`skills/encfixture/SKILL.md` をそのまま取り込みます。Claude Code 内で:
+
+```
+/plugin marketplace add junara/encfixture
+/plugin install encfixture@encfixture
+```
+
+スキルはプラグイン名で名前空間化されるため、`/encfixture:encfixture` で明示的に起動できます（関連するタスクではエージェントが自動で読み込みます）。プラグインはリポジトリのデフォルトブランチに追従し、更新は:
+
+```
+/plugin marketplace update encfixture
+```
+
+アンインストールは `/plugin uninstall encfixture@encfixture` です。`gh skill` や `apm` で既にスキルをインストール済みの場合はどちらか一方にしてください（両方入れるとスキルが二重に読み込まれます）。
+
 ## `gh skill` でインストール（GitHub CLI）
 
 Claude Code / GitHub Copilot / Cursor / Codex / Gemini CLI に対応しています。
