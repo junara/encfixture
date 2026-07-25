@@ -43,6 +43,7 @@ func init() {
 	imageCmd.Flags().IntP("scale", "S", 4, "Text scale factor")
 	imageCmd.Flags().StringP("output", "o", "output.png", "Output file path (.png, .jpg, .jpeg)")
 	imageCmd.Flags().IntP("quality", "q", 90, "JPEG quality 1-100 (for .jpg/.jpeg output)")
+	imageCmd.Flags().Bool("no-clobber", false, "Fail if the output file already exists instead of overwriting")
 }
 
 func runImage(cmd *cobra.Command, _ []string) error {
@@ -58,6 +59,11 @@ func runImage(cmd *cobra.Command, _ []string) error {
 	scale, _ := cmd.Flags().GetInt("scale")
 	output, _ := cmd.Flags().GetString("output")
 	quality, _ := cmd.Flags().GetInt("quality")
+
+	noClobber, _ := cmd.Flags().GetBool("no-clobber")
+	if err := checkClobber(output, noClobber); err != nil {
+		return err
+	}
 
 	cfg := domain.ImageConfig{
 		Width:      width,

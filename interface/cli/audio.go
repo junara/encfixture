@@ -33,6 +33,7 @@ func init() {
 	audioCmd.Flags().IntP("channels", "C", 2, "Number of audio channels")
 	audioCmd.Flags().Float64P("frequency", "f", 440.0, "Tone frequency in Hz (for sine/tone type)")
 	audioCmd.Flags().StringP("output", "o", "output.wav", "Output file path (any format supported by ffmpeg)")
+	audioCmd.Flags().Bool("no-clobber", false, "Fail if the output file already exists instead of overwriting")
 }
 
 func runAudio(cmd *cobra.Command, _ []string) error {
@@ -42,6 +43,11 @@ func runAudio(cmd *cobra.Command, _ []string) error {
 	channels, _ := cmd.Flags().GetInt("channels")
 	frequency, _ := cmd.Flags().GetFloat64("frequency")
 	output, _ := cmd.Flags().GetString("output")
+
+	noClobber, _ := cmd.Flags().GetBool("no-clobber")
+	if err := checkClobber(output, noClobber); err != nil {
+		return err
+	}
 
 	cfg := domain.AudioConfig{
 		Type:       domain.AudioType(audioType),

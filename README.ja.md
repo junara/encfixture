@@ -109,6 +109,7 @@ encfixture image --json --center "TEST" -o test.png
 | `--scale` | `-S` | 4 | テキストの拡大率 |
 | `--output` | `-o` | output.png | 出力ファイルパス（.png, .jpg, .jpeg） |
 | `--quality` | `-q` | 90 | JPEG 品質 1-100（.jpg/.jpeg 出力時） |
+| `--no-clobber` | | | 既存の出力ファイルがある場合は上書きせずエラーにする |
 
 ### 動画の生成
 
@@ -187,6 +188,7 @@ encfixture video --json --tl frame -d 3 -o test.mp4
 | `--pix-fmt` | | | ピクセルフォーマット（例: `yuv420p`, `yuv422p10le`。デフォルト: コーデック依存） |
 | `--sync` | | false | A/V シンクテストパターン: 各マーカーでビープ音と白フラッシュが同時に発生 |
 | `--sync-interval` | | 1.0 | シンクマーカーの間隔（秒） |
+| `--no-clobber` | | | 既存の出力ファイルがある場合は上書きせずエラーにする |
 
 `--sync` を指定すると、各間隔の先頭で画面全体の白フラッシュとビープ音（音程は `--frequency`）が同時に約0.08秒間発生します。`--tr timecode` などのオーバーレイはそのまま描画されるので、どのマーカーでズレたか読み取れます。`--sync` は `--audio` より優先されます。
 
@@ -228,6 +230,7 @@ encfixture audio --json -t sine -d 3 -o beep.wav
 | `--channels` | `-C` | 2 | チャンネル数 |
 | `--frequency` | `-f` | 440 | 周波数（Hz） |
 | `--output` | `-o` | output.wav | 出力ファイルパス（ffmpeg 対応の任意フォーマット） |
+| `--no-clobber` | | | 既存の出力ファイルがある場合は上書きせずエラーにする |
 
 ### verify（検査）
 

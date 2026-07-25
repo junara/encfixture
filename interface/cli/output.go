@@ -2,9 +2,29 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 )
+
+// errOutputExists reports a refusal to overwrite an existing file under --no-clobber.
+var errOutputExists = errors.New("output file already exists")
+
+// checkClobber refuses to overwrite path when noClobber is set. By default
+// generation commands overwrite existing files, matching their fixture
+// regeneration purpose; --no-clobber opts into failing instead.
+func checkClobber(path string, noClobber bool) error {
+	if !noClobber {
+		return nil
+	}
+
+	_, err := os.Stat(path)
+	if err == nil {
+		return fmt.Errorf("%w: %s (remove it or drop --no-clobber to overwrite)", errOutputExists, path)
+	}
+
+	return nil
+}
 
 type result struct {
 	Status   string `json:"status"`

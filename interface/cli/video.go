@@ -58,6 +58,7 @@ func init() {
 	videoCmd.Flags().String("pix-fmt", "", "Pixel format, e.g. yuv420p, yuv422p10le (default: codec-dependent)")
 	videoCmd.Flags().Bool("sync", false, "Generate an A/V sync test pattern (periodic beep + visual flash)")
 	videoCmd.Flags().Float64("sync-interval", 1.0, "Seconds between A/V sync markers (with --sync)")
+	videoCmd.Flags().Bool("no-clobber", false, "Fail if the output file already exists instead of overwriting")
 }
 
 func runVideo(cmd *cobra.Command, _ []string) error {
@@ -84,6 +85,11 @@ func runVideo(cmd *cobra.Command, _ []string) error {
 	pixFmt, _ := cmd.Flags().GetString("pix-fmt")
 	sync, _ := cmd.Flags().GetBool("sync")
 	syncInterval, _ := cmd.Flags().GetFloat64("sync-interval")
+
+	noClobber, _ := cmd.Flags().GetBool("no-clobber")
+	if err := checkClobber(output, noClobber); err != nil {
+		return err
+	}
 
 	crfValue := ""
 	if crf >= 0 {

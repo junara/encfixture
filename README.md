@@ -103,6 +103,7 @@ encfixture image --json --center "TEST" -o test.png
 | `--scale` | `-S` | 4 | Text scale factor |
 | `--output` | `-o` | output.png | Output file path (.png, .jpg, .jpeg) |
 | `--quality` | `-q` | 90 | JPEG quality 1-100 (for .jpg/.jpeg output) |
+| `--no-clobber` | | | Fail if the output file already exists instead of overwriting |
 
 ### Video Generation
 
@@ -178,6 +179,7 @@ encfixture video --json --tl frame -d 3 -o test.mp4
 | `--pix-fmt` | | | Pixel format, e.g. `yuv420p`, `yuv422p10le` (default: codec-dependent) |
 | `--sync` | | false | A/V sync test pattern: a beep and a white flash fire together at each marker |
 | `--sync-interval` | | 1.0 | Seconds between sync markers |
+| `--no-clobber` | | | Fail if the output file already exists instead of overwriting |
 
 When `--sync` is set, a white full-frame flash and a beep (pitch from `--frequency`) fire together at the start of every interval, each lasting ~0.08s. Overlays like `--tr timecode` still render, so you can read which marker drifted. `--sync` overrides `--audio`.
 
@@ -216,6 +218,7 @@ encfixture audio --json -t sine -d 3 -o beep.wav
 | `--channels` | `-C` | 2 | Number of channels |
 | `--frequency` | `-f` | 440 | Frequency (Hz) |
 | `--output` | `-o` | output.wav | Output file path (any format supported by ffmpeg) |
+| `--no-clobber` | | | Fail if the output file already exists instead of overwriting |
 
 ### Verify (inspect)
 
