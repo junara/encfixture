@@ -16,13 +16,37 @@ type result struct {
 	Duration string `json:"duration,omitempty"`
 }
 
+type errorOutput struct {
+	Status string `json:"status"`
+	Error  string `json:"error"`
+}
+
+// jsonWritten tracks whether a JSON document was already emitted to stdout, so
+// Execute does not append a second one after e.g. a batch summary with failures.
+var jsonWritten bool
+
+// writeJSON encodes v to stdout as a single JSON document.
+func writeJSON(v any) {
+	jsonWritten = true
+
+	if err := json.NewEncoder(os.Stdout).Encode(v); err != nil {
+		fmt.Fprintf(os.Stderr, "json encode error: %v\n", err)
+	}
+}
+
+// writeJSONError reports err on stdout in JSON form when --json is active and
+// nothing has been emitted yet, so machine consumers never get an empty stdout.
+func writeJSONError(err error) {
+	if !jsonOutput || jsonWritten {
+		return
+	}
+
+	writeJSON(errorOutput{Status: "error", Error: err.Error()})
+}
+
 func printResult(r result) {
 	if jsonOutput {
-		enc := json.NewEncoder(os.Stdout)
-
-		if err := enc.Encode(r); err != nil {
-			fmt.Fprintf(os.Stderr, "json encode error: %v\n", err)
-		}
+		writeJSON(r)
 
 		return
 	}

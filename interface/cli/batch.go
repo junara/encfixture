@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -149,8 +148,5 @@ func emitBatchJSON(results []domain.JobResult, succeeded, failed int) {
 		}
 	}
 
-	enc := json.NewEncoder(os.Stdout)
-	if err := enc.Encode(out); err != nil {
-		fmt.Fprintf(os.Stderr, "json encode error: %v\n", err)
-	}
+	writeJSON(out)
 }

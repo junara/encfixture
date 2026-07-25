@@ -68,6 +68,7 @@ func exactArgsWithHelpHint(n int) cobra.PositionalArgs {
 // Execute runs the root command.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
+		writeJSONError(err)
 		fmt.Fprintf(os.Stderr, "encfixture: %v\n", err)
 
 		var uErr *usageError

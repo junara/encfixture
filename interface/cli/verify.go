@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -55,12 +54,7 @@ type verifyResult struct {
 
 func printMediaInfo(path string, info domain.MediaInfo) {
 	if jsonOutput {
-		enc := json.NewEncoder(os.Stdout)
-
-		encErr := enc.Encode(verifyResult{File: path, Format: info.Format, Streams: info.Streams})
-		if encErr != nil {
-			fmt.Fprintf(os.Stderr, "json encode error: %v\n", encErr)
-		}
+		writeJSON(verifyResult{File: path, Format: info.Format, Streams: info.Streams})
 
 		return
 	}
