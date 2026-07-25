@@ -64,6 +64,18 @@ func writeJSONError(err error) {
 	writeJSON(errorOutput{Status: "error", Error: err.Error()})
 }
 
+// printProgress emits a status line to stderr when it is a terminal, so
+// interactive users see activity during long encodes without adding noise to
+// logs or pipelines.
+func printProgress(msg string) {
+	info, err := os.Stderr.Stat()
+	if err != nil || info.Mode()&os.ModeCharDevice == 0 {
+		return
+	}
+
+	fmt.Fprintln(os.Stderr, msg)
+}
+
 func printResult(r result) {
 	if jsonOutput {
 		writeJSON(r)

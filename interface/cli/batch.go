@@ -66,6 +66,8 @@ func runBatch(cmd *cobra.Command, args []string) error {
 		usecase.NewAudioUseCase(ffmpeg),
 	)
 
+	printProgress(fmt.Sprintf("Running %d jobs (parallel %d)...", len(batch.Jobs), parallel))
+
 	results := uc.Generate(cmd.Context(), batch, usecase.BatchOptions{
 		Parallel: parallel,
 		FailFast: failFast,

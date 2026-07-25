@@ -61,6 +61,8 @@ func runAudio(cmd *cobra.Command, _ []string) error {
 	ffmpeg := newFFmpeg()
 	uc := usecase.NewAudioUseCase(ffmpeg)
 
+	printProgress(fmt.Sprintf("Generating audio %s (%ss)...", output, duration))
+
 	if err := uc.Generate(cfg); err != nil {
 		return fmt.Errorf("audio generation failed: %w", err)
 	}

@@ -128,6 +128,8 @@ func runVideo(cmd *cobra.Command, _ []string) error {
 	renderer := infrastructure.NewImageRenderer()
 	uc := usecase.NewVideoUseCase(ffmpeg, renderer)
 
+	printProgress(fmt.Sprintf("Generating video %s (%dx%d, %ss)...", output, width, height, duration))
+
 	if err := uc.Generate(cfg); err != nil {
 		return fmt.Errorf("video generation failed: %w", err)
 	}
