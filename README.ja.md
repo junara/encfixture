@@ -33,6 +33,7 @@ go install github.com/junara/encfixture@latest
 | フラグ | 説明 |
 |---|---|
 | `--json` | 結果を JSON で出力 |
+| `--verbose` | ffmpeg のログとエンコード進捗を表示 |
 | `--version` | バージョンを表示 |
 
 ### オーバーレイの仕組み

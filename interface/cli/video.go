@@ -118,7 +118,7 @@ func runVideo(cmd *cobra.Command, _ []string) error {
 		SyncInterval: syncInterval,
 	}
 
-	ffmpeg := infrastructure.NewFFmpeg()
+	ffmpeg := newFFmpeg()
 	renderer := infrastructure.NewImageRenderer()
 	uc := usecase.NewVideoUseCase(ffmpeg, renderer)
 

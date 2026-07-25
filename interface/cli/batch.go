@@ -58,7 +58,7 @@ func runBatch(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("load batch: %w", err)
 	}
 
-	ffmpeg := infrastructure.NewFFmpeg()
+	ffmpeg := newFFmpeg()
 	renderer := infrastructure.NewImageRenderer()
 	uc := usecase.NewBatchUseCase(
 		usecase.NewImageUseCase(renderer),

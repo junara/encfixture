@@ -6,13 +6,18 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/junara/encfixture/infrastructure"
+
 	"github.com/spf13/cobra"
 )
 
 // Version is set at build time via ldflags.
 var Version = "dev"
 
-var jsonOutput bool
+var (
+	jsonOutput bool
+	verbose    bool
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "encfixture",
@@ -36,6 +41,7 @@ Each position flag (--tl, --tr, --center, --bl, --br) accepts:
 
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output results as JSON")
+	rootCmd.PersistentFlags().BoolVar(&verbose, "verbose", false, "Show ffmpeg log output and encoding progress")
 
 	rootCmd.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
 		return &usageError{err: err, path: cmd.CommandPath()}
@@ -52,6 +58,14 @@ type usageError struct {
 func (u *usageError) Error() string { return u.err.Error() }
 
 func (u *usageError) Unwrap() error { return u.err }
+
+// newFFmpeg builds the ffmpeg runner, honoring the global --verbose flag.
+func newFFmpeg() *infrastructure.FFmpeg {
+	ffmpeg := infrastructure.NewFFmpeg()
+	ffmpeg.Verbose = verbose
+
+	return ffmpeg
+}
 
 // exactArgsWithHelpHint validates like cobra.ExactArgs but marks failures as
 // usage errors, since usage is no longer printed automatically on errors.

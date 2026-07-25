@@ -33,6 +33,7 @@ Download from [Releases](https://github.com/junara/encfixture/releases).
 | Flag | Description |
 |---|---|
 | `--json` | Output results as JSON |
+| `--verbose` | Show ffmpeg log output and encoding progress |
 | `--version` | Show version |
 
 ### Overlay System

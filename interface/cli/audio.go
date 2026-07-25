@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/junara/encfixture/domain"
-	"github.com/junara/encfixture/infrastructure"
 	"github.com/junara/encfixture/usecase"
 
 	"github.com/spf13/cobra"
@@ -53,7 +52,7 @@ func runAudio(cmd *cobra.Command, _ []string) error {
 		Output:     output,
 	}
 
-	ffmpeg := infrastructure.NewFFmpeg()
+	ffmpeg := newFFmpeg()
 	uc := usecase.NewAudioUseCase(ffmpeg)
 
 	if err := uc.Generate(cfg); err != nil {
