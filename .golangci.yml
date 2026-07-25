@@ -44,7 +44,7 @@ linters:
     - godot
     - godox
     - gomoddirectives
-    - gomodguard
+    - gomodguard_v2
     - goprintffuncname
     - gosec
     - gosmopolitan
@@ -184,6 +184,9 @@ linters:
           - exhaustruct
           - err113
           - gosec
+          # goconst v1.9+ はテストファイルも走査するが、テーブル駆動テストの
+          # 文字列リテラル重複は意図的なもの
+          - goconst
       - path: infrastructure/ffprobe\.go
         linters:
           # ffprobe's JSON output uses snake_case field names we must match.

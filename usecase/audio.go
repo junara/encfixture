@@ -52,7 +52,7 @@ func (uc *AudioUseCase) Generate(cfg domain.AudioConfig) error {
 
 	args := []string{
 		"-y",
-		"-f", "lavfi",
+		"-f", lavfiFormat,
 		"-i", audioFilter,
 		"-t", cfg.Duration,
 	}

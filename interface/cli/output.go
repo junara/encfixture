@@ -57,8 +57,7 @@ type errorOutput struct {
 // hint, so agents and scripts can branch on the failure without parsing the
 // human-oriented message. Unrecognized errors get the generic "error" code.
 func classifyError(err error) (string, string) {
-	var uErr *usageError
-	if errors.As(err, &uErr) {
+	if uErr, ok := errors.AsType[*usageError](err); ok {
 		return "usage", fmt.Sprintf("Run '%s --help' for usage.", uErr.path)
 	}
 

@@ -28,6 +28,8 @@ const (
 	defaultSyncInterval = 1.0
 	// syncBeepAmplitude keeps the beep below full scale to avoid clipping.
 	syncBeepAmplitude = "0.5"
+	// lavfiFormat is ffmpeg's libavfilter virtual input device.
+	lavfiFormat = "lavfi"
 )
 
 // ErrUnknownVideoCodec indicates an unrecognized video codec was specified.
@@ -219,8 +221,8 @@ func (uc *VideoUseCase) generateSimple(cfg domain.VideoConfig, ext string) error
 
 	args := append([]string{
 		"-y",
-		"-f", "lavfi", "-i", videoFilter,
-		"-f", "lavfi", "-i", audioFilter,
+		"-f", lavfiFormat, "-i", videoFilter,
+		"-f", lavfiFormat, "-i", audioFilter,
 		"-t", cfg.Duration,
 		"-shortest",
 	}, encodeArgs...)
@@ -302,7 +304,7 @@ func (uc *VideoUseCase) runFFmpegWithPipe(pipeReader *io.PipeReader, cfg domain.
 		"-video_size", fmt.Sprintf("%dx%d", cfg.Width, cfg.Height),
 		"-framerate", strconv.Itoa(cfg.FPS),
 		"-i", "pipe:0",
-		"-f", "lavfi", "-i", uc.buildAudioFilter(cfg),
+		"-f", lavfiFormat, "-i", uc.buildAudioFilter(cfg),
 		"-t", cfg.Duration,
 		"-shortest",
 	}, encodeArgs...)
