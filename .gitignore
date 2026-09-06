@@ -2,6 +2,7 @@
 dist/
 tmp/
 docs/node_modules/
+.claude/
 
 
 # APM dependencies
