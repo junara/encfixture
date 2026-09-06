@@ -1,7 +1,6 @@
 package infrastructure_test
 
 import (
-	"context"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -25,7 +24,7 @@ func TestFFprobe_Probe_Video(t *testing.T) {
 	requireBinary(t, "ffprobe")
 
 	out := filepath.Join(t.TempDir(), "v.mp4")
-	cmd := exec.CommandContext(context.Background(), "ffmpeg", "-y",
+	cmd := exec.CommandContext(t.Context(), "ffmpeg", "-y",
 		"-f", "lavfi", "-i", "color=c=black:s=64x48:d=1:r=30", "-pix_fmt", "yuv420p", out)
 
 	runErr := cmd.Run()

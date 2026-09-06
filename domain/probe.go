@@ -26,10 +26,10 @@ type StreamInfo struct {
 	Index      int    `json:"index"`
 	Type       string `json:"type"`
 	Codec      string `json:"codec"`
-	Width      int    `json:"width,omitempty"`
-	Height     int    `json:"height,omitempty"`
+	Width      int    `json:"width,omitzero"`
+	Height     int    `json:"height,omitzero"`
 	FPS        string `json:"fps,omitempty"`
 	PixFmt     string `json:"pixFmt,omitempty"`
 	SampleRate string `json:"sampleRate,omitempty"`
-	Channels   int    `json:"channels,omitempty"`
+	Channels   int    `json:"channels,omitzero"`
 }

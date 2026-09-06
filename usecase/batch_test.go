@@ -1,7 +1,6 @@
 package usecase_test
 
 import (
-	"context"
 	"errors"
 	"io"
 	"sync/atomic"
@@ -77,7 +76,7 @@ func TestBatchUseCase_Generate_AllSucceed(t *testing.T) {
 		usecase.NewAudioUseCase(ffmpeg),
 	)
 
-	results := uc.Generate(context.Background(), makeBatch(), usecase.BatchOptions{Parallel: 2, FailFast: false})
+	results := uc.Generate(t.Context(), makeBatch(), usecase.BatchOptions{Parallel: 2, FailFast: false})
 
 	if len(results) != 3 {
 		t.Fatalf("got %d results, want 3", len(results))
@@ -110,7 +109,7 @@ func TestBatchUseCase_Generate_FailFast(t *testing.T) {
 		usecase.NewAudioUseCase(ffmpeg),
 	)
 
-	results := uc.Generate(context.Background(), makeBatch(), usecase.BatchOptions{Parallel: 1, FailFast: true})
+	results := uc.Generate(t.Context(), makeBatch(), usecase.BatchOptions{Parallel: 1, FailFast: true})
 
 	if results[0].Err == nil {
 		t.Fatal("expected first job to fail")
@@ -156,7 +155,7 @@ func TestBatchUseCase_Generate_ParallelBounded(t *testing.T) {
 		usecase.NewAudioUseCase(ffmpeg),
 	)
 
-	_ = uc.Generate(context.Background(), domain.Batch{Jobs: jobs}, usecase.BatchOptions{Parallel: 2, FailFast: false})
+	_ = uc.Generate(t.Context(), domain.Batch{Jobs: jobs}, usecase.BatchOptions{Parallel: 2, FailFast: false})
 
 	if got := peak.Load(); got > 2 {
 		t.Errorf("peak concurrency = %d, want <= 2", got)
