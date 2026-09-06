@@ -209,6 +209,10 @@ type ImageConfig struct {
 	Scale      int
 	Output     string
 	Quality    int // JPEG quality (1-100); ignored for PNG output
+	// TargetSize is the desired output size in bytes; 0 means no target. It
+	// selects the JPEG quality that lands closest to the size, so it applies
+	// to JPEG output only.
+	TargetSize int64
 }
 
 // VideoConfig holds the configuration for video generation.
@@ -232,6 +236,9 @@ type VideoConfig struct {
 	PixFmt       string     // pixel format (e.g. "yuv420p"); empty means codec-dependent default
 	Sync         bool       // generate an A/V sync test pattern (periodic beep + visual flash)
 	SyncInterval float64    // seconds between sync markers; <=0 means the default
+	// TargetSize is the desired output size in bytes; 0 means no target. The
+	// video bitrate is derived from it, so the resulting size is approximate.
+	TargetSize int64
 }
 
 // AudioConfig holds the configuration for audio generation.
@@ -242,4 +249,7 @@ type AudioConfig struct {
 	Channels   int
 	Frequency  float64
 	Output     string
+	// TargetSize is the desired output size in bytes; 0 means no target. The
+	// audio bitrate is derived from it, so the resulting size is approximate.
+	TargetSize int64
 }

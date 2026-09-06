@@ -40,6 +40,7 @@ type jobDTO struct {
 	Quality      *int     `json:"quality"`
 	Sync         *bool    `json:"sync"`
 	SyncInterval *float64 `json:"syncInterval"`
+	TargetSize   *string  `json:"targetSize"`
 }
 
 type batchDTO struct {
@@ -72,7 +73,7 @@ func LoadBatch(path string) (domain.Batch, error) {
 		BG: nil, Color: nil, TL: nil, TR: nil, Center: nil, BL: nil, BR: nil,
 		Scale: nil, Output: nil, Audio: nil, SampleRate: nil, Channels: nil, Frequency: nil,
 		Codec: nil, CRF: nil, Bitrate: nil, PixFmt: nil, Quality: nil,
-		Sync: nil, SyncInterval: nil,
+		Sync: nil, SyncInterval: nil, TargetSize: nil,
 	}
 	if dto.Defaults != nil {
 		defaults = *dto.Defaults
@@ -111,17 +112,22 @@ func dtoToJob(defaults, job *jobDTO) (domain.Job, error) {
 
 	jobType := domain.JobType(*typePtr)
 
+	targetSize, sizeErr := pickTargetSize(job.TargetSize, defaults.TargetSize)
+	if sizeErr != nil {
+		return domain.Job{Type: "", Image: nil, Video: nil, Audio: nil}, sizeErr
+	}
+
 	switch jobType {
 	case domain.JobTypeImage:
-		img := buildImage(defaults, job, output)
+		img := buildImage(defaults, job, output, targetSize)
 
 		return domain.Job{Type: jobType, Image: &img, Video: nil, Audio: nil}, nil
 	case domain.JobTypeVideo:
-		vid := buildVideo(defaults, job, output)
+		vid := buildVideo(defaults, job, output, targetSize)
 
 		return domain.Job{Type: jobType, Image: nil, Video: &vid, Audio: nil}, nil
 	case domain.JobTypeAudio:
-		aud := buildAudio(defaults, job, output)
+		aud := buildAudio(defaults, job, output, targetSize)
 
 		return domain.Job{Type: jobType, Image: nil, Video: nil, Audio: &aud}, nil
 	default:
@@ -130,7 +136,23 @@ func dtoToJob(defaults, job *jobDTO) (domain.Job, error) {
 	}
 }
 
-func buildImage(defaults, job *jobDTO, output string) domain.ImageConfig {
+// pickTargetSize resolves the job's target size, falling back to the batch
+// defaults. An unset value yields 0, meaning no target.
+func pickTargetSize(primary, fallback *string) (int64, error) {
+	raw := pickString(primary, fallback, "")
+	if raw == "" {
+		return 0, nil
+	}
+
+	size, err := domain.ParseFileSize(raw)
+	if err != nil {
+		return 0, fmt.Errorf("%w", err)
+	}
+
+	return size, nil
+}
+
+func buildImage(defaults, job *jobDTO, output string, targetSize int64) domain.ImageConfig {
 	return domain.ImageConfig{
 		Width:      pickInt(job.Width, defaults.Width, 1920),
 		Height:     pickInt(job.Height, defaults.Height, 1080),
@@ -140,10 +162,11 @@ func buildImage(defaults, job *jobDTO, output string) domain.ImageConfig {
 		Scale:      pickInt(job.Scale, defaults.Scale, 4),
 		Output:     output,
 		Quality:    pickInt(job.Quality, defaults.Quality, defaultJPEGQuality),
+		TargetSize: targetSize,
 	}
 }
 
-func buildVideo(defaults, job *jobDTO, output string) domain.VideoConfig {
+func buildVideo(defaults, job *jobDTO, output string, targetSize int64) domain.VideoConfig {
 	return domain.VideoConfig{
 		Width:        pickInt(job.Width, defaults.Width, 1920),
 		Height:       pickInt(job.Height, defaults.Height, 1080),
@@ -164,6 +187,7 @@ func buildVideo(defaults, job *jobDTO, output string) domain.VideoConfig {
 		PixFmt:       pickString(job.PixFmt, defaults.PixFmt, ""),
 		Sync:         pickBool(job.Sync, defaults.Sync, false),
 		SyncInterval: pickFloat(job.SyncInterval, defaults.SyncInterval, 0),
+		TargetSize:   targetSize,
 	}
 }
 
@@ -178,7 +202,7 @@ func pickCRF(primary, fallback *int) string {
 	return strconv.Itoa(crf)
 }
 
-func buildAudio(defaults, job *jobDTO, output string) domain.AudioConfig {
+func buildAudio(defaults, job *jobDTO, output string, targetSize int64) domain.AudioConfig {
 	return domain.AudioConfig{
 		Type:       domain.AudioType(pickString(job.Audio, defaults.Audio, string(domain.AudioSilence))),
 		Duration:   pickString(job.Duration, defaults.Duration, "10"),
@@ -186,6 +210,7 @@ func buildAudio(defaults, job *jobDTO, output string) domain.AudioConfig {
 		Channels:   pickInt(job.Channels, defaults.Channels, 2),
 		Frequency:  pickFloat(job.Frequency, defaults.Frequency, 440.0),
 		Output:     output,
+		TargetSize: targetSize,
 	}
 }
 

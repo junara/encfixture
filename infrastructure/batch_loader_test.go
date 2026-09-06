@@ -196,3 +196,51 @@ func TestLoadBatch_UnknownType(t *testing.T) {
 		t.Fatalf("expected ErrBatchInvalid, got %v", err)
 	}
 }
+
+func TestLoadBatch_TargetSize(t *testing.T) {
+	t.Parallel()
+
+	path := writeJSON(t, `{
+  "defaults": {"targetSize": "1MB"},
+  "jobs": [
+    {"type": "video", "output": "a.mp4"},
+    {"type": "audio", "output": "b.mp3", "targetSize": "512KB"},
+    {"type": "image", "output": "c.jpg"}
+  ]
+}`)
+
+	batch, err := infrastructure.LoadBatch(path)
+	if err != nil {
+		t.Fatalf("LoadBatch: %v", err)
+	}
+
+	if len(batch.Jobs) != 3 {
+		t.Fatalf("got %d jobs, want 3", len(batch.Jobs))
+	}
+
+	video := batch.Jobs[0].Video
+	if video == nil || video.TargetSize != 1048576 {
+		t.Errorf("video target size = %+v, want 1048576", video)
+	}
+
+	audio := batch.Jobs[1].Audio
+	if audio == nil || audio.TargetSize != 524288 {
+		t.Errorf("audio target size = %+v, want 524288", audio)
+	}
+
+	image := batch.Jobs[2].Image
+	if image == nil || image.TargetSize != 1048576 {
+		t.Errorf("image target size = %+v, want 1048576", image)
+	}
+}
+
+func TestLoadBatch_InvalidTargetSize(t *testing.T) {
+	t.Parallel()
+
+	path := writeJSON(t, `{"jobs": [{"type": "video", "output": "a.mp4", "targetSize": "huge"}]}`)
+
+	_, err := infrastructure.LoadBatch(path)
+	if !errors.Is(err, domain.ErrInvalidTargetSize) {
+		t.Errorf("LoadBatch error = %v, want ErrInvalidTargetSize", err)
+	}
+}
