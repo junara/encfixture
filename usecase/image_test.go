@@ -236,3 +236,87 @@ func TestImageUseCase_Generate_WriteImageError(t *testing.T) {
 		t.Fatal("Generate() should return error")
 	}
 }
+
+func TestImageUseCase_Generate_TargetSizePicksQuality(t *testing.T) {
+	t.Parallel()
+
+	renderer := newMockRenderer()
+	uc := usecase.NewImageUseCase(renderer)
+
+	cfg := domain.ImageConfig{
+		Width:      640,
+		Height:     480,
+		Background: "solid",
+		Color:      "black",
+		Output:     "test.jpg",
+		Scale:      4,
+		TargetSize: 50000,
+	}
+
+	err := uc.Generate(cfg)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	// The mock encoder produces quality*1000 bytes, so 50000 fits quality 50.
+	if renderer.writeImageQuality != 50 {
+		t.Errorf("WriteImage quality = %d, want 50", renderer.writeImageQuality)
+	}
+
+	if len(renderer.encodeImageQualities) == 0 {
+		t.Error("EncodeImage was not called to size the output")
+	}
+}
+
+func TestImageUseCase_Generate_TargetSizeBelowRange(t *testing.T) {
+	t.Parallel()
+
+	renderer := newMockRenderer()
+	uc := usecase.NewImageUseCase(renderer)
+
+	cfg := domain.ImageConfig{
+		Width:      640,
+		Height:     480,
+		Background: "solid",
+		Color:      "black",
+		Output:     "test.jpg",
+		Scale:      4,
+		TargetSize: 10,
+	}
+
+	err := uc.Generate(cfg)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	// Even the lowest quality overshoots; the closest end of the range wins.
+	if renderer.writeImageQuality != 1 {
+		t.Errorf("WriteImage quality = %d, want 1", renderer.writeImageQuality)
+	}
+}
+
+func TestImageUseCase_Generate_TargetSizeUnsupportedFormat(t *testing.T) {
+	t.Parallel()
+
+	renderer := newMockRenderer()
+	uc := usecase.NewImageUseCase(renderer)
+
+	cfg := domain.ImageConfig{
+		Width:      640,
+		Height:     480,
+		Background: "solid",
+		Color:      "black",
+		Output:     "test.png",
+		Scale:      4,
+		TargetSize: 50000,
+	}
+
+	err := uc.Generate(cfg)
+	if !errors.Is(err, domain.ErrTargetSizeUnsupported) {
+		t.Fatalf("Generate() error = %v, want ErrTargetSizeUnsupported", err)
+	}
+
+	if renderer.writeImageCalled {
+		t.Error("WriteImage was called despite an unsupported target size")
+	}
+}
