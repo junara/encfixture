@@ -208,3 +208,61 @@ func TestAudioUseCase_Generate_MonoChannels(t *testing.T) {
 		t.Errorf("mono sine should not have -ac flag, got: %s", args)
 	}
 }
+
+func TestAudioUseCase_Generate_TargetSize(t *testing.T) {
+	t.Parallel()
+
+	ffmpeg := &mockFFmpeg{}
+	uc := usecase.NewAudioUseCase(ffmpeg)
+
+	cfg := domain.AudioConfig{
+		Type:       domain.AudioSine,
+		Duration:   "10",
+		SampleRate: 48000,
+		Channels:   2,
+		Frequency:  440,
+		Output:     "test.mp3",
+		TargetSize: 1048576,
+	}
+
+	err := uc.Generate(cfg)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	// 1MB over 10s, minus the container margin.
+	if args := strings.Join(ffmpeg.runArgs, " "); !strings.Contains(args, "-b:a 830472") {
+		t.Errorf("expected %q in args, got: %s", "-b:a 830472", args)
+	}
+}
+
+func TestAudioUseCase_Generate_TargetSizeUnsupportedFormat(t *testing.T) {
+	t.Parallel()
+
+	ffmpeg := &mockFFmpeg{}
+	uc := usecase.NewAudioUseCase(ffmpeg)
+
+	cfg := domain.AudioConfig{
+		Type:       domain.AudioSine,
+		Duration:   "10",
+		SampleRate: 48000,
+		Channels:   2,
+		Frequency:  440,
+		Output:     "test.wav",
+		TargetSize: 1048576,
+	}
+
+	err := uc.Generate(cfg)
+	if !errors.Is(err, domain.ErrTargetSizeUnsupported) {
+		t.Fatalf("Generate() error = %v, want ErrTargetSizeUnsupported", err)
+	}
+
+	// PCM size follows the sample rate, so the message names the rate that fits.
+	if !strings.Contains(err.Error(), "--sample-rate 26214") {
+		t.Errorf("expected a sample-rate hint, got: %v", err)
+	}
+
+	if ffmpeg.runCalled {
+		t.Error("ffmpeg was run despite an unsupported target size")
+	}
+}
