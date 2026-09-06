@@ -24,7 +24,10 @@ var imageCmd = &cobra.Command{
   encfixture image -b test -o colorbar.png
 
   # All overlay positions
-  encfixture image --tl frame --tr timecode --bl filename --br "ID-001" --center "TEST" -o info.png`,
+  encfixture image --tl frame --tr timecode --bl filename --br "ID-001" --center "TEST" -o info.png
+
+  # Aim for a 500KB JPEG (quality picked to fit)
+  encfixture image -b test --target-size 500KB -o sized.jpg`,
 	RunE: runImage,
 }
 
@@ -43,6 +46,7 @@ func init() {
 	imageCmd.Flags().IntP("scale", "S", 4, "Text scale factor")
 	imageCmd.Flags().StringP("output", "o", "output.png", "Output file path (.png, .jpg, .jpeg)")
 	imageCmd.Flags().IntP("quality", "q", 90, "JPEG quality 1-100 (for .jpg/.jpeg output)")
+	imageCmd.Flags().String("target-size", "", "Approximate output file size, e.g. 500KB (picks the JPEG quality)")
 	imageCmd.Flags().Bool("no-clobber", false, "Fail if the output file already exists instead of overwriting")
 }
 
@@ -59,6 +63,15 @@ func runImage(cmd *cobra.Command, _ []string) error {
 	scale, _ := cmd.Flags().GetInt("scale")
 	output, _ := cmd.Flags().GetString("output")
 	quality, _ := cmd.Flags().GetInt("quality")
+
+	if err := exclusiveFlags(cmd, "target-size", "quality"); err != nil {
+		return err
+	}
+
+	targetSize, err := targetSizeFlag(cmd)
+	if err != nil {
+		return err
+	}
 
 	noClobber, _ := cmd.Flags().GetBool("no-clobber")
 	if err := checkClobber(output, noClobber); err != nil {
@@ -77,9 +90,10 @@ func runImage(cmd *cobra.Command, _ []string) error {
 			BottomLeft:  bl,
 			BottomRight: br,
 		},
-		Scale:   scale,
-		Output:  output,
-		Quality: quality,
+		Scale:      scale,
+		Output:     output,
+		Quality:    quality,
+		TargetSize: targetSize,
 	}
 
 	renderer := infrastructure.NewImageRenderer()
@@ -89,12 +103,17 @@ func runImage(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("image generation failed: %w", err)
 	}
 
+	size := fileSize(output)
+
 	printResult(result{
-		Status: "ok",
-		File:   output,
-		Type:   "image",
-		Width:  width,
-		Height: height,
+		Status:     "ok",
+		File:       output,
+		Type:       "image",
+		Width:      width,
+		Height:     height,
+		Size:       size,
+		TargetSize: targetSize,
+		Warning:    targetSizeWarning("image", size, targetSize),
 	})
 
 	return nil

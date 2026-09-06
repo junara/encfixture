@@ -20,7 +20,10 @@ var audioCmd = &cobra.Command{
   encfixture audio -t sine -f 1000 -d 5 -o beep.wav
 
   # White noise
-  encfixture audio -t noise -d 3 -o noise.mp3`,
+  encfixture audio -t noise -d 3 -o noise.mp3
+
+  # Aim for a 2MB file (bitrate derived from size and duration)
+  encfixture audio -t sine -d 60 --target-size 2MB -o sized.mp3`,
 	RunE: runAudio,
 }
 
@@ -33,6 +36,7 @@ func init() {
 	audioCmd.Flags().IntP("channels", "C", 2, "Number of audio channels")
 	audioCmd.Flags().Float64P("frequency", "f", 440.0, "Tone frequency in Hz (for sine/tone type)")
 	audioCmd.Flags().StringP("output", "o", "output.wav", "Output file path (any format supported by ffmpeg)")
+	audioCmd.Flags().String("target-size", "", "Approximate output file size, e.g. 2MB (compressed formats only)")
 	audioCmd.Flags().Bool("no-clobber", false, "Fail if the output file already exists instead of overwriting")
 }
 
@@ -43,6 +47,11 @@ func runAudio(cmd *cobra.Command, _ []string) error {
 	channels, _ := cmd.Flags().GetInt("channels")
 	frequency, _ := cmd.Flags().GetFloat64("frequency")
 	output, _ := cmd.Flags().GetString("output")
+
+	targetSize, err := targetSizeFlag(cmd)
+	if err != nil {
+		return err
+	}
 
 	noClobber, _ := cmd.Flags().GetBool("no-clobber")
 	if err := checkClobber(output, noClobber); err != nil {
@@ -56,6 +65,7 @@ func runAudio(cmd *cobra.Command, _ []string) error {
 		Channels:   channels,
 		Frequency:  frequency,
 		Output:     output,
+		TargetSize: targetSize,
 	}
 
 	ffmpeg := newFFmpeg()
@@ -67,11 +77,16 @@ func runAudio(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("audio generation failed: %w", err)
 	}
 
+	size := fileSize(output)
+
 	printResult(result{
-		Status:   "ok",
-		File:     output,
-		Type:     "audio",
-		Duration: duration,
+		Status:     "ok",
+		File:       output,
+		Type:       "audio",
+		Duration:   duration,
+		Size:       size,
+		TargetSize: targetSize,
+		Warning:    targetSizeWarning("audio", size, targetSize),
 	})
 
 	return nil

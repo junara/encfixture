@@ -2,9 +2,12 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 
+	"github.com/junara/encfixture/domain"
 	"github.com/junara/encfixture/infrastructure"
 
 	"github.com/spf13/cobra"
@@ -64,6 +67,47 @@ func newFFmpeg() *infrastructure.FFmpeg {
 	ffmpeg.Verbose = verbose
 
 	return ffmpeg
+}
+
+// errConflictingFlags reports two flags that steer the same setting in
+// different ways being set together.
+var errConflictingFlags = errors.New("conflicting flags")
+
+// exclusiveFlags fails when more than one of names was set, so conflicting
+// intent is reported instead of one flag silently winning.
+func exclusiveFlags(cmd *cobra.Command, names ...string) error {
+	var set []string
+
+	for _, name := range names {
+		if cmd.Flags().Changed(name) {
+			set = append(set, name)
+		}
+	}
+
+	if len(set) > 1 {
+		return &usageError{
+			err:  fmt.Errorf("%w: --%s cannot be combined", errConflictingFlags, strings.Join(set, " and --")),
+			path: cmd.CommandPath(),
+		}
+	}
+
+	return nil
+}
+
+// targetSizeFlag reads --target-size as a byte count. An unset flag yields 0,
+// meaning the encoder settings decide the size as before.
+func targetSizeFlag(cmd *cobra.Command) (int64, error) {
+	raw, _ := cmd.Flags().GetString("target-size")
+	if raw == "" {
+		return 0, nil
+	}
+
+	size, err := domain.ParseFileSize(raw)
+	if err != nil {
+		return 0, fmt.Errorf("%w", err)
+	}
+
+	return size, nil
 }
 
 // exactArgsWithHelpHint validates like cobra.ExactArgs but marks failures as
