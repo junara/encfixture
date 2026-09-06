@@ -43,6 +43,9 @@ encfixture video --codec prores -d 5 -o prores.mov
 # Fixed bitrate and pixel format
 encfixture video --codec h264 --bitrate 5M --pix-fmt yuv420p -d 5 -o cbr.mp4
 
+# Aim for a file size (bitrate derived from size and duration)
+encfixture video --target-size 20MB -d 30 -o sized.mp4
+
 # A/V sync test pattern (beep + white flash every second)
 encfixture video --sync --tr timecode -d 10 -o sync.mp4
 
@@ -74,6 +77,7 @@ encfixture video --sync --sync-interval 0.5 -d 5 -o sync_fast.mp4
 | `--codec` | | | Video codec: h264, hevc, vp9, av1, prores (default: container default) |
 | `--crf` | | | Constant rate factor for h264/hevc/vp9/av1 (default: encoder default) |
 | `--bitrate` | | | Video bitrate, e.g. `5M` or `800k` (default: encoder default) |
+| `--target-size` | | | Approximate output file size, e.g. `20MB` (see [Target File Size](/encfixture/en/usage/target-size/)) |
 | `--pix-fmt` | | | Pixel format, e.g. `yuv420p`, `yuv422p10le` (default: codec-dependent) |
 | `--sync` | | false | A/V sync test pattern: a beep and a white flash fire together at each marker |
 | `--sync-interval` | | 1.0 | Seconds between sync markers |
