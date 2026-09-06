@@ -67,6 +67,9 @@ type mockRenderer struct {
 	writeImagePath        string
 	writeImageQuality     int
 	writeImageErr         error
+	encodeImageQualities  []int
+	encodeBytesPerQuality int
+	encodeImageErr        error
 	parseColorResult      color.Color
 	contrastColorResult   color.Color
 }
@@ -79,8 +82,9 @@ type drawTextAtCall struct {
 
 func newMockRenderer() *mockRenderer {
 	return &mockRenderer{
-		parseColorResult:    color.Black,
-		contrastColorResult: color.White,
+		parseColorResult:      color.Black,
+		contrastColorResult:   color.White,
+		encodeBytesPerQuality: 1000,
 	}
 }
 
@@ -127,6 +131,22 @@ func (m *mockRenderer) WriteImage(path string, _ *image.RGBA, quality int) error
 	m.mu.Unlock()
 
 	return m.writeImageErr
+}
+
+// EncodeImage stands in for the JPEG encoder with a size that grows linearly
+// with quality, so the target-size search has a monotonic curve to bisect.
+func (m *mockRenderer) EncodeImage(_ string, _ *image.RGBA, quality int) ([]byte, error) {
+	m.mu.Lock()
+	m.encodeImageQualities = append(m.encodeImageQualities, quality)
+	perQuality := m.encodeBytesPerQuality
+	err := m.encodeImageErr
+	m.mu.Unlock()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return make([]byte, quality*perQuality), nil
 }
 
 func (m *mockRenderer) ParseColor(_ string) color.Color {

@@ -38,6 +38,7 @@ type Renderer interface {
 	DrawScrollingGradient(img *image.RGBA, frameIdx, fps int)
 	DrawMovingBox(img *image.RGBA, frameIdx, fps int)
 	WriteImage(path string, img *image.RGBA, quality int) error
+	EncodeImage(path string, img *image.RGBA, quality int) ([]byte, error)
 	ParseColor(name string) color.Color
 	ContrastColor(bg color.Color) color.Color
 }
