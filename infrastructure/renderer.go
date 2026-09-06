@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"image"
@@ -32,6 +33,7 @@ const (
 	movingBoxDivisor   = 8 // moving box is 1/movingBoxDivisor of the frame
 	movingBoxHSweepSec = 2 // seconds for one horizontal sweep of the moving box
 	movingBoxVSweepSec = 3 // seconds for one vertical sweep of the moving box
+	outputFileMode     = 0o644
 )
 
 // ErrUnsupportedImageFormat indicates the output extension maps to no known image encoder.
@@ -299,37 +301,48 @@ func pingPong(frame, period, span int) int {
 // file extension (.png, .jpg, .jpeg). quality applies to JPEG only (1-100);
 // out-of-range values fall back to the default of 90.
 func (r *ImageRenderer) WriteImage(path string, img *image.RGBA, quality int) error {
+	data, err := r.EncodeImage(path, img, quality)
+	if err != nil {
+		return err
+	}
+
+	writeErr := os.WriteFile(path, data, outputFileMode)
+	if writeErr != nil {
+		return fmt.Errorf("failed to write file: %w", writeErr)
+	}
+
+	return nil
+}
+
+// EncodeImage encodes img in the format implied by path's extension and
+// returns the bytes, without touching the filesystem. It lets a caller weigh
+// several encoder settings - sizing a JPEG against a target file size, say -
+// before committing one to disk.
+func (r *ImageRenderer) EncodeImage(path string, img *image.RGBA, quality int) ([]byte, error) {
 	ext := strings.ToLower(filepath.Ext(path))
 	if ext != ".png" && ext != ".jpg" && ext != ".jpeg" {
-		return fmt.Errorf("%w: %q (supported: .png, .jpg, .jpeg)", ErrUnsupportedImageFormat, ext)
+		return nil, fmt.Errorf("%w: %q (supported: .png, .jpg, .jpeg)", ErrUnsupportedImageFormat, ext)
 	}
 
-	file, err := os.Create(path) //nolint:gosec // path is provided by the user via CLI flags
-	if err != nil {
-		return fmt.Errorf("failed to create file: %w", err)
-	}
-
-	defer func() {
-		_ = file.Close()
-	}()
+	var buf bytes.Buffer
 
 	var encodeErr error
 
 	if ext == ".png" {
-		encodeErr = png.Encode(file, img)
+		encodeErr = png.Encode(&buf, img)
 	} else {
 		if quality < 1 || quality > maxJPEGQuality {
 			quality = defaultJPEGQuality
 		}
 
-		encodeErr = jpeg.Encode(file, img, &jpeg.Options{Quality: quality})
+		encodeErr = jpeg.Encode(&buf, img, &jpeg.Options{Quality: quality})
 	}
 
 	if encodeErr != nil {
-		return fmt.Errorf("image encoding failed: %w", encodeErr)
+		return nil, fmt.Errorf("image encoding failed: %w", encodeErr)
 	}
 
-	return nil
+	return buf.Bytes(), nil
 }
 
 // ParseColor converts a color name or hex string to a color.Color value.
