@@ -159,14 +159,14 @@ func runVideo(cmd *cobra.Command, _ []string) error {
 	printResult(result{
 		Status:     "ok",
 		File:       output,
-		Type:       "video",
+		Type:       kindVideo,
 		Width:      width,
 		Height:     height,
 		FPS:        fps,
 		Duration:   duration,
 		Size:       size,
 		TargetSize: targetSize,
-		Warning:    targetSizeWarning("video", size, targetSize),
+		Warning:    targetSizeWarning(kindVideo, size, targetSize),
 	})
 
 	return nil

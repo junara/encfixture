@@ -82,11 +82,11 @@ func runAudio(cmd *cobra.Command, _ []string) error {
 	printResult(result{
 		Status:     "ok",
 		File:       output,
-		Type:       "audio",
+		Type:       kindAudio,
 		Duration:   duration,
 		Size:       size,
 		TargetSize: targetSize,
-		Warning:    targetSizeWarning("audio", size, targetSize),
+		Warning:    targetSizeWarning(kindAudio, size, targetSize),
 	})
 
 	return nil
