@@ -28,7 +28,10 @@ var videoCmd = &cobra.Command{
   encfixture video -a sine --frequency 1000 --center "BEEP" -d 3 -o beep.mp4
 
   # A/V sync test pattern (beep + flash every second)
-  encfixture video --sync --tr timecode -d 10 -o sync.mp4`,
+  encfixture video --sync --tr timecode -d 10 -o sync.mp4
+
+  # Aim for a 20MB file (bitrate derived from size and duration)
+  encfixture video --target-size 20MB -d 30 -b gradient -o big.mp4`,
 	RunE: runVideo,
 }
 
@@ -55,6 +58,7 @@ func init() {
 	videoCmd.Flags().String("codec", "", "Video codec: h264, hevc, vp9, av1, prores (default: container default)")
 	videoCmd.Flags().Int("crf", -1, "Constant rate factor for h264/hevc/vp9/av1 (-1: encoder default)")
 	videoCmd.Flags().String("bitrate", "", "Video bitrate, e.g. 5M or 800k (default: encoder default)")
+	videoCmd.Flags().String("target-size", "", "Approximate output file size, e.g. 10MB or 500KB (derives the bitrate)")
 	videoCmd.Flags().String("pix-fmt", "", "Pixel format, e.g. yuv420p, yuv422p10le (default: codec-dependent)")
 	videoCmd.Flags().Bool("sync", false, "Generate an A/V sync test pattern (periodic beep + visual flash)")
 	videoCmd.Flags().Float64("sync-interval", 1.0, "Seconds between A/V sync markers (with --sync)")
@@ -85,6 +89,21 @@ func runVideo(cmd *cobra.Command, _ []string) error {
 	pixFmt, _ := cmd.Flags().GetString("pix-fmt")
 	sync, _ := cmd.Flags().GetBool("sync")
 	syncInterval, _ := cmd.Flags().GetFloat64("sync-interval")
+
+	// Paired one at a time: --bitrate and --crf remain valid together, only
+	// --target-size conflicts with each of them.
+	if err := exclusiveFlags(cmd, "target-size", "bitrate"); err != nil {
+		return err
+	}
+
+	if err := exclusiveFlags(cmd, "target-size", "crf"); err != nil {
+		return err
+	}
+
+	targetSize, err := targetSizeFlag(cmd)
+	if err != nil {
+		return err
+	}
 
 	noClobber, _ := cmd.Flags().GetBool("no-clobber")
 	if err := checkClobber(output, noClobber); err != nil {
@@ -122,6 +141,7 @@ func runVideo(cmd *cobra.Command, _ []string) error {
 		PixFmt:       pixFmt,
 		Sync:         sync,
 		SyncInterval: syncInterval,
+		TargetSize:   targetSize,
 	}
 
 	ffmpeg := newFFmpeg()
@@ -134,14 +154,19 @@ func runVideo(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("video generation failed: %w", err)
 	}
 
+	size := fileSize(output)
+
 	printResult(result{
-		Status:   "ok",
-		File:     output,
-		Type:     "video",
-		Width:    width,
-		Height:   height,
-		FPS:      fps,
-		Duration: duration,
+		Status:     "ok",
+		File:       output,
+		Type:       "video",
+		Width:      width,
+		Height:     height,
+		FPS:        fps,
+		Duration:   duration,
+		Size:       size,
+		TargetSize: targetSize,
+		Warning:    targetSizeWarning("video", size, targetSize),
 	})
 
 	return nil

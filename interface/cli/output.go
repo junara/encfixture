@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 
 	"github.com/junara/encfixture/domain"
@@ -37,13 +38,74 @@ func checkClobber(path string, noClobber bool) error {
 }
 
 type result struct {
-	Status   string `json:"status"`
-	File     string `json:"file"`
-	Type     string `json:"type"`
-	Width    int    `json:"width,omitempty"`
-	Height   int    `json:"height,omitempty"`
-	FPS      int    `json:"fps,omitempty"`
-	Duration string `json:"duration,omitempty"`
+	Status     string `json:"status"`
+	File       string `json:"file"`
+	Type       string `json:"type"`
+	Width      int    `json:"width,omitzero"`
+	Height     int    `json:"height,omitzero"`
+	FPS        int    `json:"fps,omitzero"`
+	Duration   string `json:"duration,omitempty"`
+	Size       int64  `json:"size,omitzero"`
+	TargetSize int64  `json:"targetSize,omitzero"`
+	Warning    string `json:"warning,omitempty"`
+}
+
+// sizeTolerance is how far the produced file may drift from --target-size
+// before the result says so. Encoders only approximate a requested size, and
+// content that compresses to almost nothing can miss it by a wide margin.
+const sizeTolerance = 0.1
+
+// fileSize returns the size of path in bytes, or 0 when it cannot be read.
+func fileSize(path string) int64 {
+	info, err := os.Stat(path)
+	if err != nil {
+		return 0
+	}
+
+	return info.Size()
+}
+
+// targetSizeWarning reports how far the generated file landed from the
+// requested size, with the knobs that move it in the right direction. It
+// returns an empty string when no target was set or the drift is within
+// sizeTolerance.
+func targetSizeWarning(kind string, actual, target int64) string {
+	if target <= 0 || actual <= 0 {
+		return ""
+	}
+
+	drift := math.Abs(float64(actual-target)) / float64(target)
+	if drift <= sizeTolerance {
+		return ""
+	}
+
+	return fmt.Sprintf(
+		"output is %s, %.0f%% off the requested %s; to get closer, %s",
+		domain.FormatFileSize(actual), drift*100, domain.FormatFileSize(target),
+		targetSizeAdvice(kind, actual < target),
+	)
+}
+
+// targetSizeAdvice names the flags that move a given media type toward its
+// target size: each type is steered by a different set, and an encoder that
+// cannot fill the requested bitrate needs more detail to encode, not a
+// different rate.
+func targetSizeAdvice(kind string, undershot bool) string {
+	switch {
+	case kind == "audio" && undershot:
+		return "use -t noise or sine (silence collapses in AAC and Opus), or write .mp3, which honors the bitrate"
+	case kind == "audio":
+		return "shorten -d, or lower --sample-rate/--channels"
+	case kind == "image" && undershot:
+		return "raise --width/--height or use a busier --bg (test, gradient, moving); JPEG quality 100 is the ceiling"
+	case kind == "image":
+		return "lower --width/--height, or use a plainer --bg"
+	case undershot:
+		return "raise --width/--height or --fps, use a busier --bg (test, gradient, moving)," +
+			" or pick --codec h264, which tracks a target bitrate closest"
+	default:
+		return "lower --width/--height or --fps, use a plainer --bg, or shorten -d"
+	}
 }
 
 type errorOutput struct {
@@ -76,6 +138,14 @@ func classifyError(err error) (string, string) {
 		return "invalid_duration", "Pass a positive number of seconds, e.g. -d 5 or -d 2.5."
 	case errors.Is(err, domain.ErrInvalidBitrate):
 		return "invalid_bitrate", "Pass a number with an optional k/M/G suffix, e.g. --bitrate 800k or 5M."
+	case errors.Is(err, domain.ErrInvalidTargetSize):
+		return "invalid_target_size", "Pass a positive size with an optional K/M/G suffix, e.g. --target-size 500KB or 10MB."
+	case errors.Is(err, domain.ErrTargetSizeUnsupported):
+		return "target_size_unsupported", "--target-size needs a format with a bitrate or quality dial: .jpg for images, a compressed codec for audio."
+	case errors.Is(err, domain.ErrTargetSizeConflict):
+		return "target_size_conflict", "Set either --target-size or --bitrate/--crf (in a batch job: targetSize or bitrate/crf), not both."
+	case errors.Is(err, domain.ErrTargetSizeTooSmall):
+		return "target_size_too_small", "Raise --target-size or shorten the duration so the streams fit in the budget."
 	case errors.Is(err, domain.ErrInvalidExpectation):
 		return "invalid_expectation", "Use --expect key=value with keys: codec, width, height, fps, pixFmt, duration, audioCodec, sampleRate, channels."
 	case errors.Is(err, errOutputExists):
@@ -136,4 +206,8 @@ func printResult(r result) {
 	}
 
 	fmt.Fprintf(os.Stderr, "Created: %s\n", r.File)
+
+	if r.Warning != "" {
+		fmt.Fprintf(os.Stderr, "warning: %s\n", r.Warning)
+	}
 }
