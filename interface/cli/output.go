@@ -50,6 +50,14 @@ type result struct {
 	Warning    string `json:"warning,omitempty"`
 }
 
+// Media kinds reported in a result's "type" field and used to pick the advice
+// that steers each one toward a requested size.
+const (
+	kindImage = "image"
+	kindVideo = "video"
+	kindAudio = "audio"
+)
+
 // sizeTolerance is how far the produced file may drift from --target-size
 // before the result says so. Encoders only approximate a requested size, and
 // content that compresses to almost nothing can miss it by a wide margin.
@@ -92,13 +100,13 @@ func targetSizeWarning(kind string, actual, target int64) string {
 // different rate.
 func targetSizeAdvice(kind string, undershot bool) string {
 	switch {
-	case kind == "audio" && undershot:
+	case kind == kindAudio && undershot:
 		return "use -t noise or sine (silence collapses in AAC and Opus), or write .mp3, which honors the bitrate"
-	case kind == "audio":
+	case kind == kindAudio:
 		return "shorten -d, or lower --sample-rate/--channels"
-	case kind == "image" && undershot:
+	case kind == kindImage && undershot:
 		return "raise --width/--height or use a busier --bg (test, gradient, moving); JPEG quality 100 is the ceiling"
-	case kind == "image":
+	case kind == kindImage:
 		return "lower --width/--height, or use a plainer --bg"
 	case undershot:
 		return "raise --width/--height or --fps, use a busier --bg (test, gradient, moving)," +

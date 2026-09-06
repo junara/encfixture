@@ -108,12 +108,12 @@ func runImage(cmd *cobra.Command, _ []string) error {
 	printResult(result{
 		Status:     "ok",
 		File:       output,
-		Type:       "image",
+		Type:       kindImage,
 		Width:      width,
 		Height:     height,
 		Size:       size,
 		TargetSize: targetSize,
-		Warning:    targetSizeWarning("image", size, targetSize),
+		Warning:    targetSizeWarning(kindImage, size, targetSize),
 	})
 
 	return nil
