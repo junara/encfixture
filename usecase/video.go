@@ -30,6 +30,22 @@ const (
 	syncBeepAmplitude = "0.5"
 	// lavfiFormat is ffmpeg's libavfilter virtual input device.
 	lavfiFormat = "lavfi"
+	// targetSizeAudioBitrate is the audio bitrate pinned when a target file
+	// size is requested, so the share of the budget left for video is known
+	// instead of depending on the encoder's default.
+	targetSizeAudioBitrate = 128000
+	// silentAudioBitrate is what an encoded silent track actually costs.
+	// Silence collapses to a few kbit/s however much bitrate it is offered, so
+	// reserving the full audio budget for it would starve the video.
+	silentAudioBitrate = 8000
+	// minVideoBitrate is the lowest bitrate worth handing to an encoder: below
+	// roughly 16 kbit/s ffmpeg rounds the rate to zero and refuses the encode,
+	// so an impossible target size is caught here with a clear message.
+	minVideoBitrate = 16000
+	// x264CBRParams pins libx264 to the requested bitrate by padding underfull
+	// frames, so a fixture that compresses to almost nothing still reaches its
+	// target size instead of undershooting it by an order of magnitude.
+	x264CBRParams = "nal-hrd=cbr:force-cfr=1"
 )
 
 // ErrUnknownVideoCodec indicates an unrecognized video codec was specified.
@@ -80,6 +96,12 @@ func buildEncodeArgs(cfg domain.VideoConfig, ext, defaultPixFmt string) ([]strin
 		codec = domain.CodecVP9
 	}
 
+	if codec == "" && cfg.TargetSize > 0 && isH264Container(ext) {
+		// Reaching a target size relies on x264's CBR padding, so pin the
+		// encoder ffmpeg would have chosen for this container anyway.
+		codec = domain.CodecH264
+	}
+
 	if codec != "" {
 		encoder, err := encoderName(codec)
 		if err != nil {
@@ -91,6 +113,15 @@ func buildEncodeArgs(cfg domain.VideoConfig, ext, defaultPixFmt string) ([]strin
 
 	if ext == webmExtension {
 		args = append(args, "-c:a", "libopus")
+	}
+
+	if cfg.TargetSize > 0 {
+		sizeArgs, sizeErr := targetSizeArgs(cfg, codec)
+		if sizeErr != nil {
+			return nil, sizeErr
+		}
+
+		args = append(args, sizeArgs...)
 	}
 
 	if cfg.CRF != "" {
@@ -115,6 +146,69 @@ func buildEncodeArgs(cfg domain.VideoConfig, ext, defaultPixFmt string) ([]strin
 	}
 
 	return args, nil
+}
+
+// targetSizeArgs derives the rate-control options that aim the encode at
+// cfg.TargetSize: the video bitrate is the size budget spread over the
+// duration, minus the audio track and a margin for container overhead. The
+// result is approximate - a static frame may compress far below the requested
+// bitrate no matter how much room it is given.
+func targetSizeArgs(cfg domain.VideoConfig, codec domain.VideoCodec) ([]string, error) {
+	durationSec, err := strconv.ParseFloat(cfg.Duration, 64)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %q", domain.ErrInvalidDuration, cfg.Duration)
+	}
+
+	// A silent track is left to the encoder: pinning a bitrate it will not
+	// spend only shrinks the video's share of the budget.
+	silent := cfg.Audio == domain.AudioSilence && !cfg.Sync
+
+	reserved := targetSizeAudioBitrate
+	if silent {
+		reserved = silentAudioBitrate
+	}
+
+	bitrate := domain.BitrateForSize(cfg.TargetSize, durationSec, reserved)
+	if bitrate < minVideoBitrate {
+		return nil, fmt.Errorf(
+			"%w: %s over %ss leaves %d bps for video after the %d bps audio track, below the %d bps"+
+				" an encoder can use; raise --target-size or shorten -d",
+			domain.ErrTargetSizeTooSmall, domain.FormatFileSize(cfg.TargetSize), cfg.Duration,
+			bitrate, reserved, minVideoBitrate,
+		)
+	}
+
+	rate := strconv.Itoa(bitrate)
+
+	args := []string{
+		"-b:v", rate,
+		"-minrate", rate,
+		"-maxrate", rate,
+		"-bufsize", rate,
+	}
+
+	if !silent {
+		args = append(args, "-b:a", strconv.Itoa(targetSizeAudioBitrate))
+	}
+
+	// Only x264 takes a CBR padding switch; the other encoders get the rate
+	// limits alone and may land under the target on very static content.
+	if codec == domain.CodecH264 {
+		args = append(args, "-x264-params", x264CBRParams)
+	}
+
+	return args, nil
+}
+
+// isH264Container reports whether ext names a container whose default video
+// encoder is libx264.
+func isH264Container(ext string) bool {
+	switch ext {
+	case ".mp4", ".m4v", ".mov", ".mkv":
+		return true
+	default:
+		return false
+	}
 }
 
 // VideoUseCase handles video file generation.
@@ -146,6 +240,16 @@ func (uc *VideoUseCase) Generate(cfg domain.VideoConfig) error {
 	bitrateErr := domain.ValidateBitrate(cfg.Bitrate)
 	if bitrateErr != nil {
 		return fmt.Errorf("%w", bitrateErr)
+	}
+
+	// The CLI rejects this combination as a usage error; catch it here too so a
+	// batch job cannot ask for a size and then silently override it, which is
+	// what ffmpeg would do with two -b:v values.
+	if cfg.TargetSize > 0 && (cfg.Bitrate != "" || cfg.CRF != "") {
+		return fmt.Errorf(
+			"%w: targetSize sets the bitrate, so it cannot be combined with bitrate or crf",
+			domain.ErrTargetSizeConflict,
+		)
 	}
 
 	err := uc.ffmpeg.CheckAvailable()

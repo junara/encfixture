@@ -766,3 +766,202 @@ func TestVideoUseCase_Generate_AudioTypes(t *testing.T) {
 		})
 	}
 }
+
+func TestVideoUseCase_Generate_TargetSize(t *testing.T) {
+	t.Parallel()
+
+	ffmpeg := &mockFFmpeg{}
+	renderer := newMockRenderer()
+	uc := usecase.NewVideoUseCase(ffmpeg, renderer)
+
+	cfg := domain.VideoConfig{
+		Width:      640,
+		Height:     480,
+		FPS:        30,
+		Duration:   "10",
+		Background: "solid",
+		Color:      "black",
+		Scale:      4,
+		Output:     "test.mp4",
+		Audio:      domain.AudioSine,
+		SampleRate: 48000,
+		Channels:   2,
+		Frequency:  440,
+		Codec:      domain.CodecH264,
+		TargetSize: 1048576,
+	}
+
+	err := uc.Generate(cfg)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	args := strings.Join(ffmpeg.runArgs, " ")
+
+	// 1MB over 10s, minus the 128k audio track and the container margin.
+	for _, want := range []string{
+		"-b:v 702472", "-minrate 702472", "-maxrate 702472", "-bufsize 702472",
+		"-b:a 128000", "-x264-params nal-hrd=cbr:force-cfr=1",
+	} {
+		if !strings.Contains(args, want) {
+			t.Errorf("expected %q in args, got: %s", want, args)
+		}
+	}
+}
+
+func TestVideoUseCase_Generate_TargetSizeTooSmall(t *testing.T) {
+	t.Parallel()
+
+	ffmpeg := &mockFFmpeg{}
+	renderer := newMockRenderer()
+	uc := usecase.NewVideoUseCase(ffmpeg, renderer)
+
+	cfg := domain.VideoConfig{
+		Width:      640,
+		Height:     480,
+		FPS:        30,
+		Duration:   "10",
+		Background: "solid",
+		Color:      "black",
+		Scale:      4,
+		Output:     "test.mp4",
+		Audio:      domain.AudioSilence,
+		SampleRate: 48000,
+		Channels:   2,
+		TargetSize: 1024,
+	}
+
+	err := uc.Generate(cfg)
+	if !errors.Is(err, domain.ErrTargetSizeTooSmall) {
+		t.Errorf("Generate() error = %v, want ErrTargetSizeTooSmall", err)
+	}
+
+	if ffmpeg.runCalled {
+		t.Error("ffmpeg was run despite an impossible target size")
+	}
+}
+
+func TestVideoUseCase_Generate_TargetSizeDefaultsToH264(t *testing.T) {
+	t.Parallel()
+
+	ffmpeg := &mockFFmpeg{}
+	renderer := newMockRenderer()
+	uc := usecase.NewVideoUseCase(ffmpeg, renderer)
+
+	cfg := domain.VideoConfig{
+		Width:      640,
+		Height:     480,
+		FPS:        30,
+		Duration:   "10",
+		Background: "solid",
+		Color:      "black",
+		Scale:      4,
+		Output:     "test.mp4",
+		Audio:      domain.AudioSilence,
+		SampleRate: 48000,
+		Channels:   2,
+		TargetSize: 1048576,
+	}
+
+	err := uc.Generate(cfg)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	args := strings.Join(ffmpeg.runArgs, " ")
+
+	// Without an explicit codec the encoder is pinned, since the CBR padding
+	// that reaches the target size is x264-specific.
+	for _, want := range []string{"-c:v libx264", "-x264-params nal-hrd=cbr:force-cfr=1"} {
+		if !strings.Contains(args, want) {
+			t.Errorf("expected %q in args, got: %s", want, args)
+		}
+	}
+}
+
+func TestVideoUseCase_Generate_TargetSizeKeepsNonH264Codec(t *testing.T) {
+	t.Parallel()
+
+	ffmpeg := &mockFFmpeg{}
+	renderer := newMockRenderer()
+	uc := usecase.NewVideoUseCase(ffmpeg, renderer)
+
+	cfg := domain.VideoConfig{
+		Width:      640,
+		Height:     480,
+		FPS:        30,
+		Duration:   "10",
+		Background: "solid",
+		Color:      "black",
+		Scale:      4,
+		Output:     "test.webm",
+		Audio:      domain.AudioSilence,
+		SampleRate: 48000,
+		Channels:   2,
+		TargetSize: 1048576,
+	}
+
+	err := uc.Generate(cfg)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	args := strings.Join(ffmpeg.runArgs, " ")
+
+	if !strings.Contains(args, "-c:v libvpx-vp9") {
+		t.Errorf("expected the webm default codec in args, got: %s", args)
+	}
+
+	if strings.Contains(args, "-x264-params") {
+		t.Errorf("x264 params leaked into a vp9 encode: %s", args)
+	}
+}
+
+func TestVideoUseCase_Generate_TargetSizeWithManualRateControl(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		bitrate string
+		crf     string
+	}{
+		{name: "with bitrate", bitrate: "5M", crf: ""},
+		{name: "with crf", bitrate: "", crf: "23"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ffmpeg := &mockFFmpeg{}
+			renderer := newMockRenderer()
+			uc := usecase.NewVideoUseCase(ffmpeg, renderer)
+
+			cfg := domain.VideoConfig{
+				Width:      640,
+				Height:     480,
+				FPS:        30,
+				Duration:   "10",
+				Background: "solid",
+				Color:      "black",
+				Scale:      4,
+				Output:     "test.mp4",
+				Audio:      domain.AudioSilence,
+				SampleRate: 48000,
+				Channels:   2,
+				Bitrate:    tt.bitrate,
+				CRF:        tt.crf,
+				TargetSize: 1048576,
+			}
+
+			err := uc.Generate(cfg)
+			if !errors.Is(err, domain.ErrTargetSizeConflict) {
+				t.Errorf("Generate() error = %v, want ErrTargetSizeConflict", err)
+			}
+
+			if ffmpeg.runCalled {
+				t.Error("ffmpeg was run despite conflicting rate control")
+			}
+		})
+	}
+}
