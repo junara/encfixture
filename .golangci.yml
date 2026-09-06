@@ -24,7 +24,7 @@ linters:
     - errname
     - errorlint
     - exhaustive
-    - exhaustruct
+    - exhaustruct_v5
     - exptostd
     - fatcontext
     - forbidigo
@@ -174,14 +174,14 @@ linters:
         linters:
           - gochecknoglobals
           - gochecknoinits
-          - exhaustruct
+          - exhaustruct_v5
           - mnd
           - noinlineerr
       - path: _test\.go
         linters:
           - funlen
           - gocognit
-          - exhaustruct
+          - exhaustruct_v5
           - err113
           - gosec
           # goconst v1.9+ はテストファイルも走査するが、テーブル駆動テストの
