@@ -83,6 +83,9 @@ encfixture image -c "#ff6600" -o orange.png
 # JPEG output with quality
 encfixture image -c blue --center "SAMPLE" -q 75 -o sample.jpg
 
+# Aim for a file size (quality is picked to fit)
+encfixture image -b test --target-size 500KB -o sized.jpg
+
 # JSON output
 encfixture image --json --center "TEST" -o test.png
 ```
@@ -103,6 +106,7 @@ encfixture image --json --center "TEST" -o test.png
 | `--scale` | `-S` | 4 | Text scale factor |
 | `--output` | `-o` | output.png | Output file path (.png, .jpg, .jpeg) |
 | `--quality` | `-q` | 90 | JPEG quality 1-100 (for .jpg/.jpeg output) |
+| `--target-size` | | | Approximate output file size, e.g. `500KB` (see [Target File Size](#target-file-size)) |
 | `--no-clobber` | | | Fail if the output file already exists instead of overwriting |
 
 ### Video Generation
@@ -142,6 +146,9 @@ encfixture video --codec prores -d 5 -o prores.mov
 # Fixed bitrate and pixel format
 encfixture video --codec h264 --bitrate 5M --pix-fmt yuv420p -d 5 -o cbr.mp4
 
+# Aim for a file size (bitrate is derived from size and duration)
+encfixture video --target-size 20MB -d 30 -o sized.mp4
+
 # A/V sync test pattern (beep + white flash every second)
 encfixture video --sync --tr timecode -d 10 -o sync.mp4
 
@@ -176,6 +183,7 @@ encfixture video --json --tl frame -d 3 -o test.mp4
 | `--codec` | | | Video codec: h264, hevc, vp9, av1, prores (default: container default) |
 | `--crf` | | | Constant rate factor for h264/hevc/vp9/av1 (default: encoder default) |
 | `--bitrate` | | | Video bitrate, e.g. `5M` or `800k` (default: encoder default) |
+| `--target-size` | | | Approximate output file size, e.g. `20MB` (see [Target File Size](#target-file-size)) |
 | `--pix-fmt` | | | Pixel format, e.g. `yuv420p`, `yuv422p10le` (default: codec-dependent) |
 | `--sync` | | false | A/V sync test pattern: a beep and a white flash fire together at each marker |
 | `--sync-interval` | | 1.0 | Seconds between sync markers |
@@ -204,6 +212,9 @@ encfixture audio -t silence -C 1 -s 44100 -o mono.wav
 # MP3 format
 encfixture audio -t sine -d 5 -o beep.mp3
 
+# Aim for a file size (bitrate is derived from size and duration)
+encfixture audio -t sine -d 60 --target-size 2MB -o sized.mp3
+
 # JSON output
 encfixture audio --json -t sine -d 3 -o beep.wav
 ```
@@ -218,7 +229,42 @@ encfixture audio --json -t sine -d 3 -o beep.wav
 | `--channels` | `-C` | 2 | Number of channels |
 | `--frequency` | `-f` | 440 | Frequency (Hz) |
 | `--output` | `-o` | output.wav | Output file path (any format supported by ffmpeg) |
+| `--target-size` | | | Approximate output file size, e.g. `2MB` (see [Target File Size](#target-file-size)) |
 | `--no-clobber` | | | Fail if the output file already exists instead of overwriting |
+
+### Target File Size
+
+`--target-size` asks for an output of a given size, for tests that care about how big a file is: upload limits, storage quotas, transfer timings. Sizes accept an optional `K`/`M`/`G` suffix and are binary — `1KB` is 1024 bytes, `10MB` is 10485760 — and `10M`, `10MB` and `10MiB` all mean the same thing.
+
+```bash
+# 20MB video: the bitrate comes from size / duration
+encfixture video --target-size 20MB -d 30 -o sized.mp4
+
+# 2MB audio
+encfixture audio -t sine -d 60 --target-size 2MB -o sized.mp3
+
+# 500KB JPEG: the quality that fits is found by bisection
+encfixture image -b test --target-size 500KB -o sized.jpg
+```
+
+The size is **approximate**. For video and audio it is reached by deriving a bitrate, not by padding the file, so the result depends on the encoder:
+
+- **Video** defaults to h264 when `--target-size` is set on an `.mp4`/`.mov`/`.mkv`/`.m4v` output, and pins the encoder to CBR, which lands within a few percent even on a black frame. Other codecs (`hevc`, `vp9`, `av1`, `prores`) only get bitrate limits and can fall well short on content that compresses to almost nothing.
+- **Audio** sets the bitrate for compressed formats. `.mp3` honors it closely; AAC and Opus collapse a silent track to a few kbit/s whatever they are told, so pair `--target-size` with `-t noise` or `-t sine` there. PCM and lossless outputs (`.wav`, `.aiff`, `.flac`, …) have no bitrate dial and are rejected — the error names the `--sample-rate` that would reach the size instead.
+- **Images** are sized by picking the JPEG quality that fits, so `--target-size` needs `.jpg`/`.jpeg` output and cannot exceed what quality 100 produces at the given resolution. Raise `--width`/`--height` or pick a busier `--bg` for larger files.
+
+`--target-size` cannot be combined with `--bitrate` or `--crf` (video) or `--quality` (image), since those set the same dial by hand.
+
+Every generation result reports the size actually produced, and warns when it lands more than 10% off the request:
+
+```bash
+$ encfixture video --target-size 5MB -d 10 -o sized.mp4 --json
+{"status":"ok","file":"sized.mp4","type":"video","width":1920,"height":1080,"fps":30,"duration":"10","size":5144863,"targetSize":5242880}
+
+$ encfixture video --codec hevc --target-size 5MB -d 10 -o small.mp4
+Created: small.mp4
+warning: output is 61.71KB, 99% off the requested 5.00MB; to get closer, raise --width/--height or --fps, use a busier --bg (test, gradient, moving), or pick --codec h264, which tracks a target bitrate closest
+```
 
 ### Doctor (environment check)
 
@@ -325,7 +371,7 @@ encfixture batch jobs.json
 }
 ```
 
-`type` and `output` are required on each job. Other fields map to the flags of the matching subcommand (use `sampleRate` in JSON instead of `--sample-rate`, and `pixFmt` instead of `--pix-fmt`). Values in the top-level `defaults` object are applied to every job and can be overridden per-job. Unknown fields are rejected to catch typos early.
+`type` and `output` are required on each job. Other fields map to the flags of the matching subcommand (use `sampleRate` in JSON instead of `--sample-rate`, `pixFmt` instead of `--pix-fmt`, and `targetSize` instead of `--target-size`). Values in the top-level `defaults` object are applied to every job and can be overridden per-job. Unknown fields are rejected to catch typos early.
 
 ```bash
 # Cap concurrency and stop scheduling after the first failure
@@ -383,6 +429,10 @@ $ encfixture video --json --codec av1 -o test.mp4
 | `encoder_not_available` | Requested encoder not in this ffmpeg build |
 | `unknown_codec` / `unknown_background` | Invalid `--codec` / `--bg` value |
 | `invalid_duration` / `invalid_bitrate` | Malformed `-d` / `--bitrate` value |
+| `invalid_target_size` | Malformed `--target-size` value |
+| `target_size_unsupported` | `--target-size` on a format with no size dial (PNG, WAV, FLAC, …) |
+| `target_size_too_small` | `--target-size` leaves less bitrate than an encoder can use |
+| `target_size_conflict` | A batch job set `targetSize` together with `bitrate` or `crf` |
 | `invalid_expectation` | Malformed `--expect` assertion |
 | `verify_failed` | One or more `--expect` assertions failed |
 | `output_exists` | Refused to overwrite under `--no-clobber` |

@@ -28,6 +28,9 @@ Output:
 | `height` | int | Height (image/video only) |
 | `fps` | int | Frames per second (video only) |
 | `duration` | string | Duration (video/audio only) |
+| `size` | int | Size of the generated file, in bytes |
+| `targetSize` | int | Requested size in bytes (only with `--target-size`) |
+| `warning` | string | Present when the result lands more than 10% off `--target-size` |
 
 ## Examples
 
@@ -75,6 +78,10 @@ $ encfixture video --json --codec av1 -o test.mp4
 | `encoder_not_available` | Requested encoder not in this ffmpeg build |
 | `unknown_codec` / `unknown_background` | Invalid `--codec` / `--bg` value |
 | `invalid_duration` / `invalid_bitrate` | Malformed `-d` / `--bitrate` value |
+| `invalid_target_size` | Malformed `--target-size` value |
+| `target_size_unsupported` | `--target-size` on a format with no size dial (PNG, WAV, FLAC, …) |
+| `target_size_too_small` | `--target-size` leaves less bitrate than an encoder can use |
+| `target_size_conflict` | A batch job set `targetSize` together with `bitrate` or `crf` |
 | `invalid_expectation` | Malformed `--expect` assertion |
 | `verify_failed` | One or more `--expect` assertions failed |
 | `output_exists` | Refused to overwrite under `--no-clobber` |

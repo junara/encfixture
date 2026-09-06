@@ -32,6 +32,9 @@ encfixture image -b test --center "SAMPLE" -o test_with_text.png
 
 # JPEG 出力（品質指定）
 encfixture image -c blue --center "SAMPLE" -q 75 -o sample.jpg
+
+# ファイル容量を指定（収まる品質を自動選択）
+encfixture image -b test --target-size 500KB -o sized.jpg
 ```
 
 ## フラグ
@@ -50,6 +53,7 @@ encfixture image -c blue --center "SAMPLE" -q 75 -o sample.jpg
 | `--scale` | `-S` | 4 | テキストの拡大率 |
 | `--output` | `-o` | output.png | 出力ファイルパス（.png, .jpg, .jpeg） |
 | `--quality` | `-q` | 90 | JPEG 品質 1-100（.jpg/.jpeg 出力時） |
+| `--target-size` | | | 出力ファイル容量の目安。例: `500KB`（[ファイル容量の指定](/encfixture/ja/usage/target-size/)を参照） |
 | `--no-clobber` | | | 既存の出力ファイルがある場合は上書きせずエラーにする |
 
 ## 出力フォーマット

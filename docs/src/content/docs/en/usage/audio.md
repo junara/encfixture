@@ -27,6 +27,9 @@ encfixture audio -t silence -C 1 -s 44100 -o mono.wav
 # MP3 format
 encfixture audio -t sine -d 5 -o beep.mp3
 
+# Aim for a file size (bitrate derived from size and duration)
+encfixture audio -t sine -d 60 --target-size 2MB -o sized.mp3
+
 # FLAC format
 encfixture audio -t silence -d 10 -o silence.flac
 ```
@@ -41,4 +44,5 @@ encfixture audio -t silence -d 10 -o silence.flac
 | `--channels` | `-C` | 2 | Number of channels |
 | `--frequency` | `-f` | 440 | Frequency (Hz) |
 | `--output` | `-o` | output.wav | Output file path (any format supported by ffmpeg) |
+| `--target-size` | | | Approximate output file size, e.g. `2MB`, for compressed formats (see [Target File Size](/encfixture/en/usage/target-size/)) |
 | `--no-clobber` | | | Fail if the output file already exists instead of overwriting |

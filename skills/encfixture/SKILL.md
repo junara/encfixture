@@ -1,6 +1,6 @@
 ---
 name: encfixture
-description: Guide to using `encfixture`, a CLI that generates dummy media files (image / video / audio) for ffmpeg encoding tests. Covers subcommands image / video / audio / batch / verify / doctor, overlay placement, background patterns (solid / test bars / scrolling gradient / moving box), video codec selection (h264 / hevc / vp9 / av1 / prores) with CRF / bitrate / pixel format, PNG / JPEG image output, A/V sync test patterns (periodic beep + visual flash), inspecting and asserting files with verify --expect, environment / encoder diagnosis with doctor, and JSON output with structured error codes.
+description: Guide to using `encfixture`, a CLI that generates dummy media files (image / video / audio) for ffmpeg encoding tests. Covers subcommands image / video / audio / batch / verify / doctor, overlay placement, background patterns (solid / test bars / scrolling gradient / moving box), video codec selection (h264 / hevc / vp9 / av1 / prores) with CRF / bitrate / pixel format, PNG / JPEG image output, approximate output file size with --target-size, A/V sync test patterns (periodic beep + visual flash), inspecting and asserting files with verify --expect, environment / encoder diagnosis with doctor, and JSON output with structured error codes.
 ---
 
 # encfixture — dummy media file generation skill
@@ -90,6 +90,7 @@ encfixture image -c blue -q 75 -o sample.jpg
 | `--scale` | `-S` | 4 | Text scale factor |
 | `--output` | `-o` | output.png | Output path (.png, .jpg, .jpeg) |
 | `--quality` | `-q` | 90 | JPEG quality 1-100 (.jpg/.jpeg only) |
+| `--target-size` | | | Approximate file size, e.g. `500KB` (.jpg/.jpeg only; picks the quality) |
 | `--no-clobber` | | | Fail if the output file already exists instead of overwriting |
 
 ## Generating videos
@@ -144,6 +145,7 @@ encfixture video --sync --sync-interval 0.5 -d 5 -o sync_fast.mp4
 | `--codec` | | | Video codec: h264, hevc, vp9, av1, prores (default: container default) |
 | `--crf` | | | CRF for h264/hevc/vp9/av1 (default: encoder default) |
 | `--bitrate` | | | Video bitrate, e.g. `5M` (default: encoder default) |
+| `--target-size` | | | Approximate file size, e.g. `20MB` (derives the bitrate; not with `--bitrate`/`--crf`) |
 | `--pix-fmt` | | | Pixel format, e.g. `yuv420p` (default: codec-dependent; prores uses `yuv422p10le`) |
 | `--sync` | | false | A/V sync test pattern: beep + white flash together at each marker (overrides `--audio`) |
 | `--sync-interval` | | 1.0 | Seconds between sync markers |
@@ -172,7 +174,33 @@ encfixture audio -t noise -d 3 -o noise.mp3
 | `--channels` | `-C` | 2 | Channel count |
 | `--frequency` | `-f` | 440 | Frequency (Hz) |
 | `--output` | `-o` | output.wav | Output path |
+| `--target-size` | | | Approximate file size, e.g. `2MB` (compressed formats only) |
 | `--no-clobber` | | | Fail if the output file already exists instead of overwriting |
+
+## Sizing the output (`--target-size`)
+
+`--target-size` aims the output at a file size, for tests about upload limits, quotas or transfer times. Sizes take a `K`/`M`/`G` suffix and are binary (`1KB` = 1024 bytes); `10M`, `10MB` and `10MiB` are the same.
+
+```bash
+encfixture video --target-size 20MB -d 30 -o sized.mp4     # bitrate = size / duration
+encfixture audio -t sine -d 60 --target-size 2MB -o sized.mp3
+encfixture image -b test --target-size 500KB -o sized.jpg  # JPEG quality picked to fit
+```
+
+The size is approximate — it comes from a derived bitrate, never from padding — so how close it lands depends on the format:
+
+- **Video**: on `.mp4`/`.mov`/`.mkv`/`.m4v` the codec becomes h264 pinned to CBR and lands within a few percent even on a black frame. `hevc`, `vp9`, `av1` and `prores` only get bitrate limits and can fall far short.
+- **Audio**: `.mp3` tracks the bitrate closely; AAC and Opus squash silence to a few kbit/s, so use `-t noise`/`-t sine` with them. `.wav`, `.aiff`, `.au` and `.flac` are rejected (`target_size_unsupported`) — the error names the `--sample-rate` that would reach the size.
+- **Image**: `.jpg`/`.jpeg` only, capped by what quality 100 produces at that resolution; raise `--width`/`--height` or use a busier `--bg` for more.
+
+Results carry the size produced, so a script can check it without a second tool. A result more than 10% off the request also carries a `warning`:
+
+```bash
+$ encfixture video --target-size 5MB -d 10 -o sized.mp4 --json
+{"status":"ok","file":"sized.mp4","type":"video","width":1920,"height":1080,"fps":30,"duration":"10","size":5144863,"targetSize":5242880}
+```
+
+`--target-size` cannot be combined with `--bitrate`/`--crf` (video) or `--quality` (image).
 
 ## Verifying files
 
@@ -255,6 +283,7 @@ encfixture batch jobs.json [--parallel N] [--fail-fast] [--json]
 - `type` and `output` are required. Other fields mirror the corresponding subcommand flags.
 - `--sample-rate` becomes `sampleRate` and `--pix-fmt` becomes `pixFmt` (camelCase) in JSON.
 - Video jobs also accept `codec`, `crf`, `bitrate`, `pixFmt`, `sync`, `syncInterval`; image jobs accept `quality`.
+- Every job type accepts `targetSize` (a string such as `"10MB"`), the batch form of `--target-size`; video jobs must not also set `bitrate` or `crf` (`target_size_conflict`).
 - `defaults` applies to all jobs and can be overridden per job.
 
 ### batch flags
@@ -322,8 +351,10 @@ Hex: `#ff6600`, `#333333`, etc.
 
 ```bash
 $ encfixture video --json --tl frame -d 5 -o test.mp4
-{"status":"ok","file":"test.mp4","type":"video","width":1920,"height":1080,"fps":30,"duration":"5"}
+{"status":"ok","file":"test.mp4","type":"video","width":1920,"height":1080,"fps":30,"duration":"5","size":123456}
 ```
+
+Generation results carry `size` (bytes on disk); with `--target-size` they also carry `targetSize` and, when the result is more than 10% off it, `warning`.
 
 ### Structured errors
 
@@ -342,7 +373,10 @@ $ encfixture video --json --codec av1 -o test.mp4
 | `ffmpeg_not_found` / `ffprobe_not_found` | tool missing from PATH | install ffmpeg |
 | `encoder_not_available` | encoder not in this ffmpeg build | run `doctor`, pick an available `--codec` |
 | `unknown_codec` / `unknown_background` | invalid `--codec` / `--bg` | use a listed value |
-| `invalid_duration` / `invalid_bitrate` / `invalid_expectation` | malformed value | fix the value |
+| `invalid_duration` / `invalid_bitrate` / `invalid_expectation` / `invalid_target_size` | malformed value | fix the value |
+| `target_size_unsupported` | `--target-size` on a format with no size dial | use `.jpg` (image) or a compressed audio format |
+| `target_size_too_small` | size leaves less bitrate than an encoder can use | raise `--target-size` or shorten `-d` |
+| `target_size_conflict` | batch job set `targetSize` with `bitrate`/`crf` | keep one of them |
 | `verify_failed` | `--expect` assertions failed | inspect `checks` in the output |
 | `output_exists` | refused overwrite under `--no-clobber` | remove file or drop the flag |
 | `probe_failed` | ffprobe could not read the file | check path / file integrity |

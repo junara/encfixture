@@ -32,6 +32,9 @@ encfixture image -b test --center "SAMPLE" -o test_with_text.png
 
 # JPEG output with quality
 encfixture image -c blue --center "SAMPLE" -q 75 -o sample.jpg
+
+# Aim for a file size (the quality that fits is picked)
+encfixture image -b test --target-size 500KB -o sized.jpg
 ```
 
 ## Flags
@@ -50,6 +53,7 @@ encfixture image -c blue --center "SAMPLE" -q 75 -o sample.jpg
 | `--scale` | `-S` | 4 | Text scale factor |
 | `--output` | `-o` | output.png | Output file path (.png, .jpg, .jpeg) |
 | `--quality` | `-q` | 90 | JPEG quality 1-100 (for .jpg/.jpeg output) |
+| `--target-size` | | | Approximate output file size, e.g. `500KB` (see [Target File Size](/encfixture/en/usage/target-size/)) |
 | `--no-clobber` | | | Fail if the output file already exists instead of overwriting |
 
 ## Output formats

@@ -56,6 +56,7 @@ encfixture batch jobs.json
 | `sync` | `--sync` | bool | video |
 | `syncInterval` | `--sync-interval` | float | video |
 | `quality` | `--quality` | int | image |
+| `targetSize` | `--target-size` | string | image, video, audio |
 
 ## CLI フラグ
 

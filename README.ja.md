@@ -86,6 +86,9 @@ encfixture image -c "#ff6600" -o orange.png
 # JPEG 出力（品質指定）
 encfixture image -c blue --center "SAMPLE" -q 75 -o sample.jpg
 
+# ファイル容量を指定（収まる品質を自動選択）
+encfixture image -b test --target-size 500KB -o sized.jpg
+
 # カラーバー + テキストオーバーレイ
 encfixture image -b test --center "SAMPLE" -o test_with_text.png
 
@@ -109,6 +112,7 @@ encfixture image --json --center "TEST" -o test.png
 | `--scale` | `-S` | 4 | テキストの拡大率 |
 | `--output` | `-o` | output.png | 出力ファイルパス（.png, .jpg, .jpeg） |
 | `--quality` | `-q` | 90 | JPEG 品質 1-100（.jpg/.jpeg 出力時） |
+| `--target-size` | | | 出力ファイル容量の目安。例: `500KB`（[ファイル容量の指定](#ファイル容量の指定)を参照） |
 | `--no-clobber` | | | 既存の出力ファイルがある場合は上書きせずエラーにする |
 
 ### 動画の生成
@@ -151,6 +155,9 @@ encfixture video --codec prores -d 5 -o prores.mov
 # 固定ビットレートとピクセルフォーマットを指定
 encfixture video --codec h264 --bitrate 5M --pix-fmt yuv420p -d 5 -o cbr.mp4
 
+# ファイル容量を指定（容量と長さからビットレートを逆算）
+encfixture video --target-size 20MB -d 30 -o sized.mp4
+
 # A/V シンクテストパターン（毎秒ビープ音 + 白フラッシュ）
 encfixture video --sync --tr timecode -d 10 -o sync.mp4
 
@@ -185,6 +192,7 @@ encfixture video --json --tl frame -d 3 -o test.mp4
 | `--codec` | | | 動画コーデック: h264, hevc, vp9, av1, prores（デフォルト: コンテナ既定） |
 | `--crf` | | | CRF 値（h264/hevc/vp9/av1 向け。デフォルト: エンコーダ既定） |
 | `--bitrate` | | | 動画ビットレート（例: `5M`, `800k`。デフォルト: エンコーダ既定） |
+| `--target-size` | | | 出力ファイル容量の目安。例: `20MB`（[ファイル容量の指定](#ファイル容量の指定)を参照） |
 | `--pix-fmt` | | | ピクセルフォーマット（例: `yuv420p`, `yuv422p10le`。デフォルト: コーデック依存） |
 | `--sync` | | false | A/V シンクテストパターン: 各マーカーでビープ音と白フラッシュが同時に発生 |
 | `--sync-interval` | | 1.0 | シンクマーカーの間隔（秒） |
@@ -213,6 +221,9 @@ encfixture audio -t silence -C 1 -s 44100 -o mono.wav
 # MP3 形式
 encfixture audio -t sine -d 5 -o beep.mp3
 
+# ファイル容量を指定（容量と長さからビットレートを逆算）
+encfixture audio -t sine -d 60 --target-size 2MB -o sized.mp3
+
 # FLAC 形式
 encfixture audio -t silence -d 10 -o silence.flac
 
@@ -230,7 +241,42 @@ encfixture audio --json -t sine -d 3 -o beep.wav
 | `--channels` | `-C` | 2 | チャンネル数 |
 | `--frequency` | `-f` | 440 | 周波数（Hz） |
 | `--output` | `-o` | output.wav | 出力ファイルパス（ffmpeg 対応の任意フォーマット） |
+| `--target-size` | | | 出力ファイル容量の目安。例: `2MB`（[ファイル容量の指定](#ファイル容量の指定)を参照） |
 | `--no-clobber` | | | 既存の出力ファイルがある場合は上書きせずエラーにする |
+
+### ファイル容量の指定
+
+アップロード上限・ストレージ枠・転送時間など、ファイル容量そのものが試験対象になるケース向けに、`--target-size` で出力容量を指定できます。値は `K`/`M`/`G` のサフィックスを付けられ、2進接頭辞として解釈します（`1KB` = 1024 バイト、`10MB` = 10485760 バイト。`10M` / `10MB` / `10MiB` はすべて同じ意味です）。
+
+```bash
+# 20MB の動画（容量 ÷ 長さからビットレートを算出）
+encfixture video --target-size 20MB -d 30 -o sized.mp4
+
+# 2MB の音声
+encfixture audio -t sine -d 60 --target-size 2MB -o sized.mp3
+
+# 500KB の JPEG（収まる品質を二分探索で決定）
+encfixture image -b test --target-size 500KB -o sized.jpg
+```
+
+容量は **近似値** です。動画・音声はパディングではなくビットレートの逆算で合わせるため、結果はエンコーダに依存します。
+
+- **動画**: `.mp4` / `.mov` / `.mkv` / `.m4v` に `--target-size` を指定するとコーデックは h264 になり、CBR で固定します。黒一色の映像でも数%以内に収まります。他のコーデック（`hevc`, `vp9`, `av1`, `prores`）はビットレート上限のみが効くため、圧縮が効きすぎる映像では大幅に下振れします。
+- **音声**: 圧縮形式にビットレートを設定します。`.mp3` はほぼ指定どおりになりますが、AAC や Opus は無音をどれだけビットレートを与えても数 kbit/s まで潰すため、`-t noise` や `-t sine` と組み合わせてください。PCM / ロスレス（`.wav`, `.aiff`, `.flac` など）はビットレートで制御できないためエラーになり、その容量になる `--sample-rate` をエラーメッセージで案内します。
+- **画像**: 収まる JPEG 品質を選ぶ方式なので `.jpg` / `.jpeg` 出力が必要で、その解像度の品質 100 が上限になります。もっと大きくしたい場合は `--width`/`--height` を上げるか、`--bg` を情報量の多いパターンにしてください。
+
+`--target-size` は同じ設定を直接指定する `--bitrate` / `--crf`（video）、`--quality`（image）とは併用できません。
+
+生成結果には実際の容量が含まれ、指定から 10% 以上ずれた場合は警告します。
+
+```bash
+$ encfixture video --target-size 5MB -d 10 -o sized.mp4 --json
+{"status":"ok","file":"sized.mp4","type":"video","width":1920,"height":1080,"fps":30,"duration":"10","size":5144863,"targetSize":5242880}
+
+$ encfixture video --codec hevc --target-size 5MB -d 10 -o small.mp4
+Created: small.mp4
+warning: output is 61.71KB, 99% off the requested 5.00MB; to get closer, raise --width/--height or --fps, use a busier --bg (test, gradient, moving), or pick --codec h264, which tracks a target bitrate closest
+```
 
 ### doctor（環境診断）
 
@@ -332,7 +378,7 @@ encfixture batch jobs.json
 }
 ```
 
-各ジョブには `type` と `output` が必須です。その他のフィールドは対応するサブコマンドのフラグと同じ意味です（`--sample-rate` は JSON では `sampleRate`、`--pix-fmt` は `pixFmt` と書きます）。トップレベルの `defaults` は全ジョブに適用され、各ジョブで個別に上書きできます。未知のフィールドはエラーになり typo を早期検出できます。
+各ジョブには `type` と `output` が必須です。その他のフィールドは対応するサブコマンドのフラグと同じ意味です（`--sample-rate` は JSON では `sampleRate`、`--pix-fmt` は `pixFmt`、`--target-size` は `targetSize` と書きます）。トップレベルの `defaults` は全ジョブに適用され、各ジョブで個別に上書きできます。未知のフィールドはエラーになり typo を早期検出できます。
 
 ```bash
 # 並列度を制限し、最初の失敗で残りをスキップ
@@ -390,6 +436,10 @@ $ encfixture video --json --codec av1 -o test.mp4
 | `encoder_not_available` | 要求したエンコーダがこの ffmpeg ビルドに無い |
 | `unknown_codec` / `unknown_background` | `--codec` / `--bg` の値が不正 |
 | `invalid_duration` / `invalid_bitrate` | `-d` / `--bitrate` の値が不正 |
+| `invalid_target_size` | `--target-size` の値が不正 |
+| `target_size_unsupported` | 容量を制御できない形式（PNG, WAV, FLAC など）に `--target-size` を指定 |
+| `target_size_too_small` | `--target-size` が小さすぎてエンコーダが扱えるビットレートを下回る |
+| `target_size_conflict` | バッチジョブで `targetSize` と `bitrate` / `crf` を同時指定 |
 | `invalid_expectation` | `--expect` の書式が不正 |
 | `verify_failed` | `--expect` のアサーションが失敗 |
 | `output_exists` | `--no-clobber` 下で上書きを拒否 |

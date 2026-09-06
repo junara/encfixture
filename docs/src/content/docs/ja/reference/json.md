@@ -28,6 +28,9 @@ encfixture video --json --tl frame --tr timecode -d 5 -o test.mp4
 | `height` | int | 高さ（image/video のみ） |
 | `fps` | int | フレームレート（video のみ） |
 | `duration` | string | 長さ（video/audio のみ） |
+| `size` | int | 生成されたファイルの容量（バイト） |
+| `targetSize` | int | 指定した容量（バイト。`--target-size` 指定時のみ） |
+| `warning` | string | `--target-size` から 10% 以上ずれた場合に付与 |
 
 ## 各コマンドの例
 
@@ -75,6 +78,10 @@ $ encfixture video --json --codec av1 -o test.mp4
 | `encoder_not_available` | 要求したエンコーダがこの ffmpeg ビルドに無い |
 | `unknown_codec` / `unknown_background` | `--codec` / `--bg` の値が不正 |
 | `invalid_duration` / `invalid_bitrate` | `-d` / `--bitrate` の値が不正 |
+| `invalid_target_size` | `--target-size` の値が不正 |
+| `target_size_unsupported` | 容量を制御できない形式（PNG, WAV, FLAC など）に `--target-size` を指定 |
+| `target_size_too_small` | `--target-size` が小さすぎてエンコーダが扱えるビットレートを下回る |
+| `target_size_conflict` | バッチジョブで `targetSize` と `bitrate` / `crf` を同時指定 |
 | `invalid_expectation` | `--expect` の書式が不正 |
 | `verify_failed` | `--expect` のアサーションが失敗 |
 | `output_exists` | `--no-clobber` 下で上書きを拒否 |
